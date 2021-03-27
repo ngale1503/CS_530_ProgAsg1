@@ -12,17 +12,9 @@ CXXFLAGS=-std=c++11 -g
 # First target is the one executed if you just type make
 # make target specifies a specific target
 # $^ is an example of a special variable.  It substitutes all dependencies
-dissem : disassembler.o optab.o symtab.o .... 
+dissem : dissem.o
 	$(CXX) $(CXXFLAGS) -o dissem $^
-
-disassembler.o : disassembler.cpp optab.h symtab.h ....
-
-optab.o : optab.cpp optab.h 
-
-symtab.o : symtab.cpp symtab.h 
-
-......
-
+dissem.o: dissem.cpp
+	${CC} -c dissem.cpp
 clean :
 	rm *.o
-
