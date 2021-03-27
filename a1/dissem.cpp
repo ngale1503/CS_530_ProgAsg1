@@ -10,20 +10,50 @@ using namespace std;
 /* -------------------------------------------------------------------------- */
 /*                                   Writer                                   */
 /* -------------------------------------------------------------------------- */
-bool writer(string input){
+bool writer(string input)
+{
     fstream outFile;
-	outFile.open("out.lst", ios::out);
-	if (!outFile) {
-		return false;
-	}
-	else {
+    outFile.open("out.lst", ios::out);
+    if (!outFile)
+    {
+        return false;
+    }
+    else
+    {
         outFile << input;
-		outFile.close(); 
+        outFile.close();
         return true;
-	}
-	return false;
+    }
+    return false;
 }
 
+/* -------------------------------------------------------------------------- */
+/*                                   Reader                                   */
+/* -------------------------------------------------------------------------- */
+/**
+ * Take a given file name and a storage vector/array, read the file from file name
+ * and store it in the vector/array. Stores it one line per row.
+ */
+bool reader(string filename, vector<string> &fileStringArray)
+{
+    /** Read the obj file and store each line as string in strArray */
+    std::ifstream fileContainer(filename);
+    if (fileContainer.is_open())
+    {
+        std::string line;
+        while (std::getline(fileContainer, line))
+        {
+            fileStringArray.push_back(line.c_str());
+        }
+        fileContainer.close();
+        return true;
+    }
+    else
+    {
+        cout << "error opeing symFile\n";
+        exit(EXIT_FAILURE);
+    }
+}
 
 /* -------------------------------------------------------------------------- */
 /*                                    MAIN                                    */
@@ -68,43 +98,8 @@ int main(int argc, char const *argv[])
         cout << "Please check symFile extention and try again. usage: ./dissem symFile.sym symFile.obj\n";
         exit(EXIT_FAILURE);
     }
-
-    /** Read the obj file and store each line as string in strArray */
-    std::ifstream symFile(symFileString);
-    if (symFile.is_open())
-    {
-        std::string line;
-        while (std::getline(symFile, line))
-        {
-            symArray.push_back(line.c_str());
-            cout << "\n";
-        }
-        symFile.close();
-    }
-    else
-    {
-        cout << "error opeing symFile\n";
-    }
-
-
-    /** Read the obj file and store each line as string in objArray */
-    std::ifstream objFile(objFileString);
-    if (objFile.is_open())
-    {
-        std::string line;
-        while (std::getline(objFile, line))
-        {
-            printf("%s", line.c_str());
-            objArray.push_back(line.c_str());
-            cout << "\n";
-        }
-        objFile.close();
-    }
-    else
-    {
-        cout << "error opeing symFile\n";
-    }
-
+    /** Read the file from first pram and store each line as array in second file */
+    reader(symFileString, symArray);
+    reader(objFileString, objArray);
     writer(symArray.at(0));
 }
-
