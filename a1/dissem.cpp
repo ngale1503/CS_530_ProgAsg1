@@ -174,11 +174,13 @@ bool parseHeader(string headerString, string &outFile, COUNTER &counter)
 bool parseTextRecord(string textLine, string &outFile, COUNTER &counter)
 {
     string startingAddress = textLine.substr(1, 6);
-    string opCodeLength = textLine.substr(7,2);
-    string opCode = textLine.substr(9, (textLine.length()-9));
+    int opCodeLengthAsInt = hexToInt(textLine.substr(6,2));
+    string opCode = textLine.substr(9, opCodeLengthAsInt);
+    string address = textLine.substr( 9 + opCodeLengthAsInt, textLine.length());
     cout << "_______________________________\n";
-    cout << "length : " << opCodeLength << "\n";
+    cout << "length : " << opCodeLengthAsInt << "\n";
     cout << "opCode : " << opCode << "\n";
+    cout << "address : " << address << "\n";
     cout << "_______________________________\n";
 /* ------------------------------ Error Checker ----------------------------- */
     // Temperoray check to see if we are on the right track.
