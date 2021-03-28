@@ -56,6 +56,16 @@ bool reader(string filename, vector<string> &fileStringArray)
 }
 
 /* -------------------------------------------------------------------------- */
+/*                                Parse Header                                */
+/* -------------------------------------------------------------------------- */
+bool parseHeader(string headerString, string &outFile){
+    string spacer = "     ";
+    string name = headerString.substr (1,6);
+    outFile = "0000" + spacer + name + spacer + spacer + "start"+ spacer + "0\n";
+    return true;
+}
+
+/* -------------------------------------------------------------------------- */
 /*                                    MAIN                                    */
 /* -------------------------------------------------------------------------- */
 
@@ -74,6 +84,9 @@ int main(int argc, char const *argv[])
     /** Storage for the files that have already been read */
     vector<string> objArray;
     vector<string> symArray;
+
+    // Final string that contains the out.lst
+    string outLstStr;
 
     /** Check if the user entered both files */
     if (argc < 2)
@@ -101,5 +114,67 @@ int main(int argc, char const *argv[])
     /** Read the file from first pram and store each line as array in second file */
     reader(symFileString, symArray);
     reader(objFileString, objArray);
+
+    // loop through the obj file and read in the translations
+    for(int i = 0; i < objArray.size(); i += 1){
+        string line = objArray.at(i);
+        char lineType = line[0];
+        switch (lineType)
+        {
+        case 'H':
+            parseHeader(line, outLstStr);
+            break;
+        case 'T':
+            /* code */
+            break;
+        case 'M':
+            /* code */
+            break;
+        case 'E':
+            /* code */
+            break;
+        default:
+            cout << "Unsupported type: " << line << "\n";
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    cout << outLstStr << "\n";
+
     writer(symArray.at(0));
 }
+
+
+/* -------------------------------------------------------------------------- */
+/*                                  Operands                                  */
+/* -------------------------------------------------------------------------- */
+const static string ops[] = {
+"18", "58", "90", "40", "B4", "28",
+"88", "A0", "24", "64", "9C", "C4",
+"C0", "F4", "3C", "30", "34", "38",
+"48", "00", "68", "50", "70", "08",
+"6C", "74", "04", "D0", "20", "60",
+"98", "C8", "44", "D8", "AC", "4C",
+"A4", "A8", "F0", "EC", "0C", "78",
+"54", "80", "D4", "14", "7C", "E8",
+"84", "10", "1C", "5C", "94", "B0",
+"E0", "F8", "2C", "B8", "DC"
+};
+
+
+/* -------------------------------------------------------------------------- */
+/*                             Operand Translation                            */
+/* -------------------------------------------------------------------------- */
+
+const static string mnemonics[] = {
+"ADD", "ADDF", "ADDR", "AND", "CLEAR", "COMP",
+"COMPF", "COMPR", "DIV", "DIVF", "DIVR", "FIX",
+"FLOAT", "HIO", "J", "JEQ", "JGT", "JLT",
+"JSUB", "LDA", "LDB", "LDCH", "LDF", "LDL",
+"LDS", "LDT", "LDX", "LPS", "MUL", "MULF",
+"MULR", "NORM", "OR", "RD", "RMO", "RSUB",
+"SHIFTL", "SHIFTR", "SIO", "SSK", "STA", "STB",
+"STCH", "STF", "STI", "STL","STS", "STSW",
+"STT", "STX", "SUB", "SUBF", "SUBR", "SVC",
+"TD", "TIO", "TIX", "TIXR", "WD"
+};
