@@ -44,24 +44,24 @@ const static string mnemonics[] = {
 /*                            Operand Type 1,2,3,4                            */
 /* -------------------------------------------------------------------------- */
 const static int instructionType[] = {
-    3,3,2,3,2,3,
-    3,2,3,3,2,1,
-    1,1,3,3,3,3,
-    3,3,3,3,3,3,
-    3,3,3,3,3,3,
-    2,1,3,3,2,3,
-    2,2,1,3,3,3,
-    3,3,3,3,3,3,
-    3,3,3,3,2,2,
-    3,1,3,2,3
-};
+    3, 3, 2, 3, 2, 3,
+    3, 2, 3, 3, 2, 1,
+    1, 1, 3, 3, 3, 3,
+    3, 3, 3, 3, 3, 3,
+    3, 3, 3, 3, 3, 3,
+    2, 1, 3, 3, 2, 3,
+    2, 2, 1, 3, 3, 3,
+    3, 3, 3, 3, 3, 3,
+    3, 3, 3, 3, 2, 2,
+    3, 1, 3, 2, 3};
 
 /* -------------------------------------------------------------------------- */
 /*                                 Hex To Int                                 */
 /* -------------------------------------------------------------------------- */
-// Convert hexadecimal string to int.
-int hexToInt(string hexStr){
-    unsigned int number;   
+/** Convert hexadecimal string to int. */
+int hexToInt(string hexStr)
+{
+    unsigned int number;
     std::stringstream ss;
     ss << std::hex << hexStr;
     ss >> number;
@@ -71,51 +71,58 @@ int hexToInt(string hexStr){
 /* -------------------------------------------------------------------------- */
 /*                                 Int To Hex                                 */
 /* -------------------------------------------------------------------------- */
-// Convert Intreger to Hexadecimal.
-string intToHex(int number){
+/** Convert Intreger to Hexadecimal. */
+string intToHex(int number)
+{
     std::stringstream stream;
     stream << std::hex << number;
     return stream.str();
 }
 
-
 /* -------------------------------------------------------------------------- */
 /*                               Program Counter                              */
 /* -------------------------------------------------------------------------- */
 /** Keeps count of the position the program is in. */
-class COUNTER{
-    private:
-        string currentPositon;
+class COUNTER
+{
+private:
+    string absoluteCounter;
+    string relativeCounter;
 
-    public:
-        COUNTER();
-        string set(string);
-        string get();
-        string add(string);
-        string subtract(string);
+public:
+    COUNTER();
+    string set(string);
+    string get();
+    string add(string);
+    string subtract(string);
 };
-COUNTER::COUNTER(){
+COUNTER::COUNTER()
+{
 }
-string COUNTER::add(string hexNumber){
-    int currentPositionInt = hexToInt(COUNTER::currentPositon);
+string COUNTER::add(string hexNumber)
+{
+    int currentPositionInt = hexToInt(COUNTER::absoluteCounter);
     int summand = hexToInt(hexNumber);
     int newCurrPosition = currentPositionInt + summand;
-    currentPositon = intToHex(newCurrPosition);
-    return currentPositon;
+    absoluteCounter = intToHex(newCurrPosition);
+    return absoluteCounter;
 }
-string COUNTER::subtract(string hexNumber){
-    int currentPositionInt = hexToInt(COUNTER::currentPositon);
+string COUNTER::subtract(string hexNumber)
+{
+    int currentPositionInt = hexToInt(COUNTER::absoluteCounter);
     int subtrahend = hexToInt(hexNumber);
     int newCurrPosition = currentPositionInt - subtrahend;
-    currentPositon = intToHex(newCurrPosition);
-    return currentPositon;
+    absoluteCounter = intToHex(newCurrPosition);
+    return absoluteCounter;
 }
-string COUNTER::get(){
-    return COUNTER::currentPositon;
+string COUNTER::get()
+{
+    return COUNTER::absoluteCounter.substr(8, COUNTER::absoluteCounter.length());
 }
-string COUNTER::set(string hexNumber){
-    currentPositon = hexNumber;
-    return currentPositon;
+string COUNTER::set(string hexNumber)
+{
+    absoluteCounter = hexNumber;
+    return absoluteCounter;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -170,9 +177,12 @@ bool reader(string filename, vector<string> &fileStringArray)
 /*                     Convert OP Code to Instruction Type                    */
 /* -------------------------------------------------------------------------- */
 /* ---- Given an op code it analyses it and returns the instruction type 2,3,4 ---- */
-int opCodeToType(string opCode){
-    for(int i = 0; i < 59; i++){
-        if(opCode == ops[i]){
+int opCodeToType(string opCode)
+{
+    for (int i = 0; i < 59; i++)
+    {
+        if (opCode == ops[i])
+        {
             return instructionType[i];
         }
     }
@@ -184,17 +194,18 @@ int opCodeToType(string opCode){
 /*                         Convert OP Code To Mnemonic                        */
 /* -------------------------------------------------------------------------- */
 /* ---------- Given an op code convert that to the correct mnemonic --------- */
-string opCodeToMnemonic(string opCode){
-    for(int i = 0; i < 59; i++){
-        if(opCode == ops[i]){
+string opCodeToMnemonic(string opCode)
+{
+    for (int i = 0; i < 59; i++)
+    {
+        if (opCode == ops[i])
+        {
             return mnemonics[i];
         }
     }
     cout << "ERROR: Mnemonic not found.\n";
     exit(EXIT_FAILURE);
 }
-
-
 
 /* -------------------------------------------------------------------------- */
 /*                                Parse Header                                */
@@ -217,19 +228,42 @@ bool parseHeader(string headerString, string &outFile, COUNTER &counter)
 /*                              Parse Text Record                             */
 /* -------------------------------------------------------------------------- */
 /** Out file is the final string that will be printed. */
-bool parseTextRecord(string textLine, string &outFile, COUNTER &counter)
+bool parseTextRecord(string textLine, string &outFile, COUNTER &counter, vector<vector<string>> modificationArray)
 {
-    string startingAddress = textLine.substr(1, 6);
-    int opCodeLengthAsInt = hexToInt(textLine.substr(7,2));
-    string opCode = textLine.substr(9, opCodeLengthAsInt);
-    string address = textLine.substr( 9 + opCodeLengthAsInt, textLine.length());
 
-    cout << "_______________________________\n";
-    cout << "length : " << opCodeLengthAsInt << "\n";
-    cout << "opCode : " << opCode << "\n";
-    cout << "address length: " << (textLine.length() - (9 + opCodeLengthAsInt)) << "\n";
-    cout << "address : " << address << "\n";
-    cout << "_______________________________\n";
+    /* --------------------------------- Anatomy -------------------------------- */
+    /**
+ *  T 000000 0A 6910083E 174000 024000
+ *  T: TYPE TEXT
+ *  000000: Starting Address
+ *  0A: Size of the object code 0A = 10 bytes so that is 10 * 2 = 20 symbols.
+ *      Thus you have 20 symbols 6910083E 174000 024000
+ *  6910083E: Type 4
+ *  174000: Type 3 or 2
+ *  024000: Type 3 or 2
+ */
+
+    string startingAddress = textLine.substr(1, 6);
+    int opCodeLengthAsInt = hexToInt(textLine.substr(7, 2));
+    string opCode = textLine.substr(9, opCodeLengthAsInt);
+    string address = textLine.substr(9 + opCodeLengthAsInt, textLine.length());
+
+    /**
+     * cout << "_______________________________\n";
+     * cout << "length : " << opCodeLengthAsInt << "\n";
+     * cout << "opCode : " << opCode << "\n";
+     * cout << "address length: " << (textLine.length() - (9 + opCodeLengthAsInt)) << "\n";
+     * cout << "address : " << address << "\n";
+     * cout << "_______________________________\n";
+     */
+    /* ------------------------------ Error Checker ----------------------------- */
+    /**
+     * Temperoray check to see if we are on the right track.
+     * if(counter.get() != startingAddress){
+     *     cout << "ERROR POSITION DO NOT MATCH!\n";
+     *     cout << "Expected address: " << startingAddress << ". Got address: " << counter.get() << "\n";
+     * }
+     */
     return true;
 }
 
@@ -240,6 +274,38 @@ bool parseModificationRecord(string modificationLine, string &outFile, COUNTER &
 {
 
     return true;
+}
+
+/* -------------------------------------------------------------------------- */
+/*            Filter Modification lines and extract type 4 location           */
+/* -------------------------------------------------------------------------- */
+vector<vector<string>> extractModificationRecords(vector<string> &objArray)
+{
+    vector<vector<string>> modificationsArray;
+    int modificationRecordsCount = 0;
+    /** loop through the obj file and read in the translations */
+    for (int i = 0; i < objArray.size(); i += 1)
+    {
+        string line = objArray.at(i);
+        char lineType = line[0];
+        if (lineType == 'M')
+        {
+
+            string location = line.substr(1, 6);
+            string modificationLength = line.substr(7, 2);
+
+            /** Create an array that stores location of type 4 and the length to be modified. */
+            vector<string> newModificationRecord;
+            newModificationRecord.push_back(location);
+            newModificationRecord.push_back(modificationLength);
+
+            /** push the new array on to all type 4 arrays */
+            modificationsArray.push_back(newModificationRecord);
+
+            modificationRecordsCount++;
+        }
+    }
+    return modificationsArray;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -261,6 +327,13 @@ bool parseEndRecord(string endLine, string &outFile, COUNTER &counter)
   */
 void mainParser(vector<string> objArray, string &outLstStr, COUNTER &counter)
 {
+    /**
+     * 2D array contains extracted modification records [M 000001 05] [M 000859 05]:
+     *      [[where to modify, length of address field to be modified in half bytes], [..], ..]
+     *      EX: [[M000001, 05],[000859, 05]]
+     */
+    vector<vector<string>> modificationsArray = extractModificationRecords(objArray);
+
     /** loop through the obj file and read in the translations */
     for (int i = 0; i < objArray.size(); i += 1)
     {
@@ -273,15 +346,14 @@ void mainParser(vector<string> objArray, string &outLstStr, COUNTER &counter)
             break;
         case 'T':
             /** TODO */
-            parseTextRecord(line, outLstStr, counter);
-            break;
-        case 'M':
-            /** TODO */
-            parseModificationRecord(line, outLstStr, counter);
+            parseTextRecord(line, outLstStr, counter, modificationsArray);
             break;
         case 'E':
             /** TODO */
             parseEndRecord(line, outLstStr, counter);
+            break;
+        case 'M':
+            /** Do Nothing */
             break;
         default:
             cout << "Unsupported type: " << line << "\n";
