@@ -167,6 +167,36 @@ bool reader(string filename, vector<string> &fileStringArray)
 }
 
 /* -------------------------------------------------------------------------- */
+/*                     Convert OP Code to Instruction Type                    */
+/* -------------------------------------------------------------------------- */
+/* ---- Given an op code it analyses it and returns the instruction type 2,3,4 ---- */
+int opCodeToType(string opCode){
+    for(int i = 0; i < 59; i++){
+        if(opCode == ops[i]){
+            return instructionType[i];
+        }
+    }
+    cout << "ERROR: Instruction type not found.\n";
+    exit(EXIT_FAILURE);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                         Convert OP Code To Mnemonic                        */
+/* -------------------------------------------------------------------------- */
+/* ---------- Given an op code convert that to the correct mnemonic --------- */
+string opCodeToMnemonic(string opCode){
+    for(int i = 0; i < 59; i++){
+        if(opCode == ops[i]){
+            return mnemonics[i];
+        }
+    }
+    cout << "ERROR: Mnemonic not found.\n";
+    exit(EXIT_FAILURE);
+}
+
+
+
+/* -------------------------------------------------------------------------- */
 /*                                Parse Header                                */
 /* -------------------------------------------------------------------------- */
 /**
@@ -193,10 +223,6 @@ bool parseTextRecord(string textLine, string &outFile, COUNTER &counter)
     int opCodeLengthAsInt = hexToInt(textLine.substr(7,2));
     string opCode = textLine.substr(9, opCodeLengthAsInt);
     string address = textLine.substr( 9 + opCodeLengthAsInt, textLine.length());
-
-    for(int i = 0; i < 59; i++){
-        cout << "OPS: " << ops[i] << " mnemonics:" << mnemonics[i] << " Type: " << instructionType[i] << "\n";
-    }
 
     cout << "_______________________________\n";
     cout << "length : " << opCodeLengthAsInt << "\n";
