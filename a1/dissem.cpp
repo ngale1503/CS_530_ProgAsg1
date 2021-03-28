@@ -230,12 +230,6 @@ bool parseTextRecord(string textLine, string &outFile, COUNTER &counter)
     cout << "address length: " << (textLine.length() - (9 + opCodeLengthAsInt)) << "\n";
     cout << "address : " << address << "\n";
     cout << "_______________________________\n";
-/* ------------------------------ Error Checker ----------------------------- */
-    // Temperoray check to see if we are on the right track.
-    // if(counter.get() != startingAddress){
-    //     cout << "ERROR POSITION DO NOT MATCH!\n";
-    //     cout << "Expected address: " << startingAddress << ". Got address: " << counter.get() << "\n";
-    // }
     return true;
 }
 
