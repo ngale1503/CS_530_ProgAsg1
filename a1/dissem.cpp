@@ -174,14 +174,18 @@ bool parseHeader(string headerString, string &outFile, COUNTER &counter)
 bool parseTextRecord(string textLine, string &outFile, COUNTER &counter)
 {
     string startingAddress = textLine.substr(1, 6);
-    
+    string opCodeLength = textLine.substr(7,2);
+    string opCode = textLine.substr(9, (textLine.length()-9));
+    cout << "_______________________________\n";
+    cout << "length : " << opCodeLength << "\n";
+    cout << "opCode : " << opCode << "\n";
+    cout << "_______________________________\n";
 /* ------------------------------ Error Checker ----------------------------- */
     // Temperoray check to see if we are on the right track.
     // if(counter.get() != startingAddress){
     //     cout << "ERROR POSITION DO NOT MATCH!\n";
     //     cout << "Expected address: " << startingAddress << ". Got address: " << counter.get() << "\n";
     // }
-    // return true;
     return true;
 }
 
