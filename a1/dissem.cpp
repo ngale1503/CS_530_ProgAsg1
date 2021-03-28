@@ -41,6 +41,22 @@ const static string mnemonics[] = {
     "TD", "TIO", "TIX", "TIXR", "WD"};
 
 /* -------------------------------------------------------------------------- */
+/*                            Operand Type 1,2,3,4                            */
+/* -------------------------------------------------------------------------- */
+const static int instructionType[] = {
+    3,3,2,3,2,3,
+    3,2,3,3,2,1,
+    1,1,3,3,3,3,
+    3,3,3,3,3,3,
+    3,3,3,3,3,3,
+    2,1,3,3,2,3,
+    2,2,1,3,3,3,
+    3,3,3,3,3,3,
+    3,3,3,3,2,2,
+    3,1,3,2,3
+};
+
+/* -------------------------------------------------------------------------- */
 /*                                 Hex To Int                                 */
 /* -------------------------------------------------------------------------- */
 // Convert hexadecimal string to int.
@@ -174,12 +190,18 @@ bool parseHeader(string headerString, string &outFile, COUNTER &counter)
 bool parseTextRecord(string textLine, string &outFile, COUNTER &counter)
 {
     string startingAddress = textLine.substr(1, 6);
-    int opCodeLengthAsInt = hexToInt(textLine.substr(6,2));
+    int opCodeLengthAsInt = hexToInt(textLine.substr(7,2));
     string opCode = textLine.substr(9, opCodeLengthAsInt);
     string address = textLine.substr( 9 + opCodeLengthAsInt, textLine.length());
+
+    for(int i = 0; i < 59; i++){
+        cout << "OPS: " << ops[i] << " mnemonics:" << mnemonics[i] << " Type: " << instructionType[i] << "\n";
+    }
+
     cout << "_______________________________\n";
     cout << "length : " << opCodeLengthAsInt << "\n";
     cout << "opCode : " << opCode << "\n";
+    cout << "address length: " << (textLine.length() - (9 + opCodeLengthAsInt)) << "\n";
     cout << "address : " << address << "\n";
     cout << "_______________________________\n";
 /* ------------------------------ Error Checker ----------------------------- */
