@@ -266,9 +266,25 @@ string opCodeToMnemonic(string opCode)
 /*                                Parse Opcodes                               */
 /* -------------------------------------------------------------------------- */
 vector<string> parseOpCodes(string opCodeToAnalyse, string allOpCodes, vector<string> &opcodesArray){
+    /**
+     * take the first to letters of the opcode and convert to binary
+     * 6910083E174000024000 -> 69 -> 01101001
+     */
     string opCodeAsBinary = hexToBin(opCodeToAnalyse);
+
+    /**
+     * first 6 bits are opcode 011010 and the last 2 bits are ni of nixbpe
+     * remove ni and get opcode as 01101000
+     */
     string opCodeRemovedExtras = opCodeAsBinary.substr(0,6) + "00";
+
+    /** convert the binary value to hex 01101000 -> 68 */
     string opCodeAsHex = bintohex(opCodeRemovedExtras);
+
+    /**
+     * look up 68 as menmonic
+     * 68 -> LDB
+     */
     string mnemonic = opcodeToMnemonic(opCodeAsHex);
     cout << "hex out: " << mnemonic << "\n";
     return opcodesArray;
@@ -331,8 +347,10 @@ bool parseModificationRecord(string modificationLine, string &outFile, COUNTER &
 /* -------------------------------------------------------------------------- */
 /*            Filter Modification lines and extract type 4 location           */
 /* -------------------------------------------------------------------------- */
-// input: [H**,T**,M00000105,M00085905, E**]
-// output: [[M000001, 05],[000859, 05]]
+/**
+ * input: [H**,T**,M00000105,M00085905, E**]
+ * output: [[M000001, 05],[000859, 05]]
+ */
 vector<vector<int>> extractModificationRecords(vector<string> &objArray)
 {
     vector<vector<int>> modificationsArray;
