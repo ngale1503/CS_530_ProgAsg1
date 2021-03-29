@@ -265,7 +265,7 @@ string opCodeToMnemonic(string opCode)
 /* -------------------------------------------------------------------------- */
 /*                                Parse Opcodes                               */
 /* -------------------------------------------------------------------------- */
-vector<string> parseOpCodes(string opCodeToAnalyse, string allOpCodes, vector<string> &opcodesArray){
+vector<string> parseOpCodes(string opCodeToAnalyse, string opCodes, vector<string> &opcodesArray){
     /**
      * take the first to letters of the opcode and convert to binary
      * 6910083E174000024000 -> 69 -> 01101001
@@ -286,6 +286,13 @@ vector<string> parseOpCodes(string opCodeToAnalyse, string allOpCodes, vector<st
      * 68 -> LDB
      */
     string mnemonic = opcodeToMnemonic(opCodeAsHex);
+
+    string ni = opCodeAsBinary.substr(6,2);
+    string xbpe = hexToBin(opCodes.substr(2,1));
+    string nixbpe = ni + xbpe;
+    
+    cout << "NIXBPE: " << nixbpe << "\n";
+
     cout << "hex out: " << mnemonic << "\n";
     return opcodesArray;
 }
