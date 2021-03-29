@@ -41,6 +41,20 @@ const static string mnemonics[] = {
     "TD", "TIO", "TIX", "TIXR", "WD"};
 
 /* -------------------------------------------------------------------------- */
+/*                             OpCode To Mnemonic                             */
+/* -------------------------------------------------------------------------- */
+string opcodeToMnemonic(string opcode){
+    for(int i = 0; i < 58; i++){
+        if(ops[i] == opcode){
+            return mnemonics[i];
+        }
+    }
+    cout << "ERROR: OPCODE NOT FOUND! OPCODE WITH THE STRING: " << opcode << " WAS NOT FOUND.\n";
+    exit(EXIT_FAILURE);
+}
+
+
+/* -------------------------------------------------------------------------- */
 /*                            Operand Type 1,2,3,4                            */
 /* -------------------------------------------------------------------------- */
 const static int instructionType[] = {
@@ -80,13 +94,54 @@ string intToHex(int number)
 }
 
 /* -------------------------------------------------------------------------- */
+/*                               Hex To Binnary                               */
+/* -------------------------------------------------------------------------- */
+string hexToBin(const string &s){
+    string out;
+    for(auto i: s){
+        uint8_t n;
+        if(i <= '9' and i >= '0')
+            n = i - '0';
+        else
+            n = 10 + i - 'A';
+        for(int8_t j = 3; j >= 0; --j)
+            out.push_back((n & (1<<j))? '1':'0');
+    }
+    return out;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*                                Binary To Hex                               */
+/* -------------------------------------------------------------------------- */
+
+string bintohex(const string &s){
+    string out;
+    for(uint i = 0; i < s.size(); i += 4){
+        int8_t n = 0;
+        for(uint j = i; j < i + 4; ++j){
+            n <<= 1;
+            if(s[j] == '1')
+                n |= 1;
+        }
+
+        if(n<=9)
+            out.push_back('0' + n);
+        else
+            out.push_back('A' + n - 10);
+    }
+
+    return out;
+}
+
+/* -------------------------------------------------------------------------- */
 /*                               Program Counter                              */
 /* -------------------------------------------------------------------------- */
 /** Keeps count of the position the program is in. */
 class COUNTER
 {
 private:
-    string absoluteCounter;
+    string positionCounter;
     string relativeCounter;
 
 public:
@@ -101,28 +156,28 @@ COUNTER::COUNTER()
 }
 string COUNTER::add(string hexNumber)
 {
-    int currentPositionInt = hexToInt(COUNTER::absoluteCounter);
+    int currentPosition = hexToInt(COUNTER::positionCounter);
     int summand = hexToInt(hexNumber);
-    int newCurrPosition = currentPositionInt + summand;
-    absoluteCounter = intToHex(newCurrPosition);
-    return absoluteCounter;
+    int newCurrPosition = currentPosition + summand;
+    positionCounter = intToHex(newCurrPosition);
+    return positionCounter;
 }
 string COUNTER::subtract(string hexNumber)
 {
-    int currentPositionInt = hexToInt(COUNTER::absoluteCounter);
+    int currentPosition = hexToInt(COUNTER::positionCounter);
     int subtrahend = hexToInt(hexNumber);
-    int newCurrPosition = currentPositionInt - subtrahend;
-    absoluteCounter = intToHex(newCurrPosition);
-    return absoluteCounter;
+    int newCurrPosition = currentPosition - subtrahend;
+    positionCounter = intToHex(newCurrPosition);
+    return positionCounter;
 }
 string COUNTER::get()
 {
-    return COUNTER::absoluteCounter.substr(8, COUNTER::absoluteCounter.length());
+    return COUNTER::positionCounter.substr(8, COUNTER::positionCounter.length());
 }
 string COUNTER::set(string hexNumber)
 {
-    absoluteCounter = hexNumber;
-    return absoluteCounter;
+    positionCounter = hexNumber;
+    return positionCounter;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -208,6 +263,19 @@ string opCodeToMnemonic(string opCode)
 }
 
 /* -------------------------------------------------------------------------- */
+/*                                Parse Opcodes                               */
+/* -------------------------------------------------------------------------- */
+vector<string> parseOpCodes(string opCodeToAnalyse, string allOpCodes, vector<string> &opcodesArray){
+    string opCodeAsBinary = hexToBin(opCodeToAnalyse);
+    string opCodeRemovedExtras = opCodeAsBinary.substr(0,6) + "00";
+    string opCodeAsHex = bintohex(opCodeRemovedExtras);
+    string mnemonic = opcodeToMnemonic(opCodeAsHex);
+    cout << "hex out: " << mnemonic << "\n";
+    return opcodesArray;
+}
+
+
+/* -------------------------------------------------------------------------- */
 /*                                Parse Header                                */
 /* -------------------------------------------------------------------------- */
 /**
@@ -218,8 +286,15 @@ bool parseHeader(string headerString, string &outFile, COUNTER &counter)
 {
     string spacer = "     ";
     string name = headerString.substr(1, 6);
-    string startingAddress = headerString.substr(7, 12);
-    counter.set(startingAddress);
+
+    string startingAddress = headerString.substr(7, 6);
+    string endingAddress = headerString.substr(13, 6);
+
+    int startingAddressAsInt = hexToInt(startingAddress);
+    int endingAddressAsInt = hexToInt(endingAddress);
+
+    string programSizeInBytes = intToHex(endingAddressAsInt - startingAddressAsInt + 1);
+
     outFile = "0000" + spacer + name + spacer + spacer + "START" + spacer + "0\n";
     return true;
 }
@@ -228,42 +303,19 @@ bool parseHeader(string headerString, string &outFile, COUNTER &counter)
 /*                              Parse Text Record                             */
 /* -------------------------------------------------------------------------- */
 /** Out file is the final string that will be printed. */
-bool parseTextRecord(string textLine, string &outFile, COUNTER &counter, vector<vector<string>> modificationArray)
+bool parseTextRecord(string textLine, string &outFile, COUNTER &counter, vector<vector<int>> modificationsArray)
 {
 
-    /* --------------------------------- Anatomy -------------------------------- */
-    /**
- *  T 000000 0A 6910083E 174000 024000
- *  T: TYPE TEXT
- *  000000: Starting Address
- *  0A: Size of the object code 0A = 10 bytes so that is 10 * 2 = 20 symbols.
- *      Thus you have 20 symbols 6910083E 174000 024000
- *  6910083E: Type 4
- *  174000: Type 3 or 2
- *  024000: Type 3 or 2
- */
-
     string startingAddress = textLine.substr(1, 6);
-    int opCodeLengthAsInt = hexToInt(textLine.substr(7, 2));
-    string opCode = textLine.substr(9, opCodeLengthAsInt);
-    string address = textLine.substr(9 + opCodeLengthAsInt, textLine.length());
 
-    /**
-     * cout << "_______________________________\n";
-     * cout << "length : " << opCodeLengthAsInt << "\n";
-     * cout << "opCode : " << opCode << "\n";
-     * cout << "address length: " << (textLine.length() - (9 + opCodeLengthAsInt)) << "\n";
-     * cout << "address : " << address << "\n";
-     * cout << "_______________________________\n";
-     */
-    /* ------------------------------ Error Checker ----------------------------- */
-    /**
-     * Temperoray check to see if we are on the right track.
-     * if(counter.get() != startingAddress){
-     *     cout << "ERROR POSITION DO NOT MATCH!\n";
-     *     cout << "Expected address: " << startingAddress << ". Got address: " << counter.get() << "\n";
-     * }
-     */
+    int opCodeLengthAsInt = hexToInt(textLine.substr(7, 2));
+
+    string allOpCodes = textLine.substr(9, opCodeLengthAsInt*2);
+
+
+    vector<string> opcodesArray;
+
+    parseOpCodes(allOpCodes.substr(0,2), allOpCodes, opcodesArray);
     return true;
 }
 
@@ -279,9 +331,11 @@ bool parseModificationRecord(string modificationLine, string &outFile, COUNTER &
 /* -------------------------------------------------------------------------- */
 /*            Filter Modification lines and extract type 4 location           */
 /* -------------------------------------------------------------------------- */
-vector<vector<string>> extractModificationRecords(vector<string> &objArray)
+// input: [H**,T**,M00000105,M00085905, E**]
+// output: [[M000001, 05],[000859, 05]]
+vector<vector<int>> extractModificationRecords(vector<string> &objArray)
 {
-    vector<vector<string>> modificationsArray;
+    vector<vector<int>> modificationsArray;
     int modificationRecordsCount = 0;
     /** loop through the obj file and read in the translations */
     for (int i = 0; i < objArray.size(); i += 1)
@@ -291,11 +345,11 @@ vector<vector<string>> extractModificationRecords(vector<string> &objArray)
         if (lineType == 'M')
         {
 
-            string location = line.substr(1, 6);
-            string modificationLength = line.substr(7, 2);
+            int location = stoi(line.substr(1, 6));
+            int modificationLength = stoi(line.substr(7, 2));
 
             /** Create an array that stores location of type 4 and the length to be modified. */
-            vector<string> newModificationRecord;
+            vector<int> newModificationRecord;
             newModificationRecord.push_back(location);
             newModificationRecord.push_back(modificationLength);
 
@@ -332,7 +386,7 @@ void mainParser(vector<string> objArray, string &outLstStr, COUNTER &counter)
      *      [[where to modify, length of address field to be modified in half bytes], [..], ..]
      *      EX: [[M000001, 05],[000859, 05]]
      */
-    vector<vector<string>> modificationsArray = extractModificationRecords(objArray);
+    vector<vector<int>> modificationsArray = extractModificationRecords(objArray);
 
     /** loop through the obj file and read in the translations */
     for (int i = 0; i < objArray.size(); i += 1)
@@ -395,7 +449,7 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    /** Check file order and put them in correct symFileString and objFileString */
+    /** Check file order and put them in correct order symFileString and objFileString */
     if (inputFileName1[inputFileName1.length() - 1] == 'j' && inputFileName2[inputFileName2.length() - 1] == 'm')
     {
         objFileString = argv[1];

@@ -17,4 +17,4 @@ dissem : dissem.o
 dissem.o: dissem.cpp
 	${CC} -c dissem.cpp
 clean :
-	rm *.o
+	rm *.o dissem
