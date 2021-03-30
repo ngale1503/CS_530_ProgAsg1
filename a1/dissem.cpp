@@ -45,11 +45,11 @@ const static string mnemonics[] = {
 /* -------------------------------------------------------------------------- */
 string opcodeToMnemonic(string opcode)
 {
-    for (int i = 0; i < 58; i++)
+    for (int i = 0; i < 60; i++)
     {
         if (ops[i] == opcode)
         {
-            return mnemonics[i];
+            return string(mnemonics[i]);
         }
     }
     cout << "ERROR: OPCODE NOT FOUND! OPCODE WITH THE STRING: " << opcode << " WAS NOT FOUND.\n";
@@ -74,10 +74,10 @@ const static int instructionType[] = {
 /* -------------------------------------------------------------------------- */
 /*                             Check Type 3 Format                            */
 /* -------------------------------------------------------------------------- */
-/* -- Checks if an operand instruction is type 2 and return true or false. -- */
+/* -- Checks if an operand instruction is type 3 and return true or false. -- */
 bool isType3(string opcode)
 {
-    for (int i = 0; i < 58; i++)
+    for (int i = 0; i < 60; i++)
     {
         if (ops[i] == opcode)
         {
@@ -312,8 +312,10 @@ void OUTPUT::setNixbpe(string newValue)
     nixbpe = newValue;
 }
 
-void OUTPUT::print(){
+void OUTPUT::print()
+{
     cout << "Address: " << address << "\n symbol: " << symbol << "\n instruction: " << instruction << "\nlocation: " << location.get() << "\n opcode: " << opcode << "\n nixbpe: " << nixbpe << "\n";
+    cout << "-------------------------------------------------\n";
 }
 
 /* -------------------------------------------------------------------------- */
@@ -370,7 +372,7 @@ bool reader(string filename, vector<string> &fileStringArray)
 /* ---- Given an op code it analyses it and returns the instruction type 2,3,4 ---- */
 int opCodeToType(string opCode)
 {
-    for (int i = 0; i < 59; i++)
+    for (int i = 0; i < 60; i++)
     {
         if (opCode == ops[i])
         {
@@ -434,7 +436,7 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray)
 {
     OUTPUT outputValue;
 
-    if (opcodes == "")
+    if (opcodes.length() < 4)
     {
         return opcodesArray;
     }
@@ -461,7 +463,6 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray)
         * look up 68 as menmonic 68 -> LDB
         */
         string mnemonic = opcodeToMnemonic(opCodeAsHex);
-
         /** store mnemonic in the output class */
         outputValue.setInstruction(mnemonic);
 
@@ -480,14 +481,13 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray)
 
         /** store nixbpe in the output class for final output. */
         outputValue.setNixbpe(nixbpe);
-
         /** Check if instruction is extended format. */
         if (isType4(nixbpe))
         {
             /** If it is extended format update the mnemonic previously stored. */
             mnemonic = "+" + mnemonic;
             outputValue.setInstruction(mnemonic);
-
+            cout <<"TYPE4 MNWMONIX " << mnemonic << "\n";
             /**
              * If extended format update opcode from 6 to 8 values.
              * EG. 691008 -> 6910083E
@@ -497,27 +497,27 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray)
 
             /** TYPE4: recursively recall the function but remove the address that was just analysed */
             string newOpcodes = opcodes.substr(8, opcodes.length() - 8);
-            parseOpCodes(newOpcodes, opcodesArray);
-
-            cout << "-------------TYPE 4---------------\n";
             outputValue.print();
+            parseOpCodes(newOpcodes, opcodesArray);
         }
-
-        cout << "-------------TYPE 3---------------\n";
-        outputValue.print();
-        /** TYPE3: recursively recall the function but remove the address that was just analysed */
-        string newOpcodes = opcodes.substr(6, opcodes.length() - 6);
-        parseOpCodes(opcodes.substr(6, opcodes.length()), opcodesArray);
+        else
+        {
+            /** TYPE3: recursively recall the function but remove the address that was just analysed */
+            string newOpcodes = opcodes.substr(6, opcodes.length() - 6);
+            outputValue.print();
+            parseOpCodes(opcodes.substr(6, opcodes.length()), opcodesArray);
+        }
     }
     else
     {
         /** TYPE2: recursively recall the function but remove the address that was just analysed */
-        cout << "-------------TYPE 2---------------\n";
-        outputValue.print();
         string newOpcodes = opcodes.substr(4, opcodes.length() - 4);
+        string mnemonic = opcodeToMnemonic(opCodeAsHex);
+        outputValue.setInstruction(mnemonic);
+        outputValue.print();
         parseOpCodes(opcodes.substr(4, opcodes.length()), opcodesArray);
     }
-
+    
     return opcodesArray;
 }
 
@@ -549,7 +549,7 @@ bool parseHeader(string headerString, string &outFile, COUNTER &counter)
 /*                              Parse Text Record                             */
 /* -------------------------------------------------------------------------- */
 /** Out file is the final string that will be printed. */
-bool parseTextRecord(string textLine, string &outFile, COUNTER &counter, vector<vector<int> > modificationsArray)
+bool parseTextRecord(string textLine, string &outFile, COUNTER &counter, vector<vector<int>> modificationsArray)
 {
 
     string startingAddress = textLine.substr(1, 6);
@@ -580,9 +580,9 @@ bool parseModificationRecord(string modificationLine, string &outFile, COUNTER &
  * input: [H**,T**,M00000105,M00085905, E**]
  * output: [[M000001, 05],[000859, 05]]
  */
-vector<vector<int> > extractModificationRecords(vector<string> &objArray)
+vector<vector<int>> extractModificationRecords(vector<string> &objArray)
 {
-    vector<vector<int> > modificationsArray;
+    vector<vector<int>> modificationsArray;
     int modificationRecordsCount = 0;
     /** loop through the obj file and read in the translations */
     for (int i = 0; i < objArray.size(); i += 1)
@@ -633,7 +633,7 @@ void mainParser(vector<string> objArray, string &outLstStr, COUNTER &counter)
      *      [[where to modify, length of address field to be modified in half bytes], [..], ..]
      *      EX: [[M000001, 05],[000859, 05]]
      */
-    vector<vector<int> > modificationsArray = extractModificationRecords(objArray);
+    vector<vector<int>> modificationsArray = extractModificationRecords(objArray);
 
     /** loop through the obj file and read in the translations */
     for (int i = 0; i < objArray.size(); i += 1)
@@ -724,8 +724,6 @@ int main(int argc, char const *argv[])
 
     /** Parse the object codes. */
     mainParser(objArray, outLstStr, *counter);
-
-    cout << outLstStr << "\n";
 
     writer(outLstStr);
 }
