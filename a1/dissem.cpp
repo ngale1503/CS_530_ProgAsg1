@@ -214,7 +214,16 @@ string COUNTER::subtract(string hexNumber)
 }
 string COUNTER::get()
 {
-    return COUNTER::positionCounter;
+    string value = COUNTER::positionCounter;
+    int length = value.length();
+
+    if(length < 4){
+        value = std::string( (4-length), '0').append( value);
+    }
+    if(length > 4){
+        value = value.substr((length)-4, 4);
+    }
+    return value;
 }
 string COUNTER::set(string hexNumber)
 {
