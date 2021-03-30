@@ -214,7 +214,7 @@ string COUNTER::subtract(string hexNumber)
 }
 string COUNTER::get()
 {
-    return COUNTER::positionCounter.substr(8, COUNTER::positionCounter.length());
+    return COUNTER::positionCounter;
 }
 string COUNTER::set(string hexNumber)
 {
@@ -247,11 +247,7 @@ string MEMORYADDRESS::get()
     {
         string finalValue;
     }
-    else
-    {
-        cout << "Error either the type or value was empty for the addressing class\n";
-    }
-    return "TODO";
+    return "Error either the type or value was empty for the addressing class\n";
 }
 void MEMORYADDRESS::setType(string newType)
 {
@@ -314,7 +310,7 @@ void OUTPUT::setNixbpe(string newValue)
 
 void OUTPUT::print()
 {
-    cout << "Address: " << address << "\n symbol: " << symbol << "\n instruction: " << instruction << "\nlocation: " << location.get() << "\n opcode: " << opcode << "\n nixbpe: " << nixbpe << "\n";
+    cout << "Address: " << address << "\n symbol: " << symbol << "\n instruction: " << instruction << "\nlocation: " << location.get() << " opcode: " << opcode << "\n nixbpe: " << nixbpe << "\n";
     cout << "-------------------------------------------------\n";
 }
 
@@ -432,15 +428,20 @@ string opCodeToMnemonic(string opCode)
 /* -------------------------------------------------------------------------- */
 /*                                Parse Opcodes                               */
 /* -------------------------------------------------------------------------- */
-vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray)
+vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string startingAddress)
 {
     OUTPUT outputValue;
+    COUNTER textLocationCounter;
+
 
     if (opcodes.length() < 4)
     {
         return opcodesArray;
     }
 
+    textLocationCounter.set(startingAddress);
+    /** store the current address to be printed out later */
+    outputValue.setAddress(textLocationCounter.get());
     /**
      * take the first two letters of the opcode and convert to binary
      * 6910083E174000024000 -> 69 -> 01101001
@@ -497,15 +498,18 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray)
 
             /** TYPE4: recursively recall the function but remove the address that was just analysed */
             string newOpcodes = opcodes.substr(8, opcodes.length() - 8);
+            /** store the current address to be printed out later */
+            textLocationCounter.add("4");
             outputValue.print();
-            parseOpCodes(newOpcodes, opcodesArray);
+            parseOpCodes(newOpcodes, opcodesArray, textLocationCounter.get());
         }
         else
         {
             /** TYPE3: recursively recall the function but remove the address that was just analysed */
             string newOpcodes = opcodes.substr(6, opcodes.length() - 6);
+            textLocationCounter.add("3");
             outputValue.print();
-            parseOpCodes(opcodes.substr(6, opcodes.length()), opcodesArray);
+            parseOpCodes(opcodes.substr(6, opcodes.length()), opcodesArray, textLocationCounter.get());
         }
     }
     else
@@ -514,8 +518,9 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray)
         string newOpcodes = opcodes.substr(4, opcodes.length() - 4);
         string mnemonic = opcodeToMnemonic(opCodeAsHex);
         outputValue.setInstruction(mnemonic);
+        textLocationCounter.add("2");
         outputValue.print();
-        parseOpCodes(opcodes.substr(4, opcodes.length()), opcodesArray);
+        parseOpCodes(opcodes.substr(4, opcodes.length()), opcodesArray, textLocationCounter.get());
     }
     
     return opcodesArray;
@@ -560,7 +565,7 @@ bool parseTextRecord(string textLine, string &outFile, COUNTER &counter, vector<
 
     vector<OUTPUT> opcodesArray;
 
-    parseOpCodes(allOpCodes, opcodesArray);
+    parseOpCodes(allOpCodes, opcodesArray, startingAddress);
     return true;
 }
 
