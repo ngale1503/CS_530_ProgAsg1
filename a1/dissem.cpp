@@ -43,16 +43,18 @@ const static string mnemonics[] = {
 /* -------------------------------------------------------------------------- */
 /*                             OpCode To Mnemonic                             */
 /* -------------------------------------------------------------------------- */
-string opcodeToMnemonic(string opcode){
-    for(int i = 0; i < 58; i++){
-        if(ops[i] == opcode){
+string opcodeToMnemonic(string opcode)
+{
+    for (int i = 0; i < 58; i++)
+    {
+        if (ops[i] == opcode)
+        {
             return mnemonics[i];
         }
     }
     cout << "ERROR: OPCODE NOT FOUND! OPCODE WITH THE STRING: " << opcode << " WAS NOT FOUND.\n";
     exit(EXIT_FAILURE);
 }
-
 
 /* -------------------------------------------------------------------------- */
 /*                            Operand Type 1,2,3,4                            */
@@ -68,6 +70,42 @@ const static int instructionType[] = {
     3, 3, 3, 3, 3, 3,
     3, 3, 3, 3, 2, 2,
     3, 1, 3, 2, 3};
+
+/* -------------------------------------------------------------------------- */
+/*                             Check Type 3 Format                            */
+/* -------------------------------------------------------------------------- */
+/* -- Checks if an operand instruction is type 2 and return true or false. -- */
+bool isType3(string opcode)
+{
+    for (int i = 0; i < 58; i++)
+    {
+        if (ops[i] == opcode)
+        {
+            if (instructionType[i] == 3)
+            {
+                return true;
+            }
+            return false;
+        }
+    }
+    cout << "ERROR: OPCODE NOT FOUND!\n OPCODE WITH THE STRING: " << opcode << " WAS NOT FOUND. CAN NOT RETURN INSTRUCTION TYPE\n";
+    exit(EXIT_FAILURE);
+}
+
+/* -------------------------------------------------------------------------- */
+/*              Check if instruction is type 4 [EXTENTED FORMAT]              */
+/* -------------------------------------------------------------------------- */
+/* --- Given nixbpe it return true is the instruction is type 4 else false -- */
+bool isType4(string nixbpe)
+{
+    char e = nixbpe[5];
+    if (e == '1')
+        return true;
+    if (e == '0')
+        return false;
+    cout << "Error: Could not tell type of 'e' in 'nixbpe', value of e was read as " << e << "\n";
+    exit(EXIT_FAILURE);
+}
 
 /* -------------------------------------------------------------------------- */
 /*                                 Hex To Int                                 */
@@ -96,36 +134,40 @@ string intToHex(int number)
 /* -------------------------------------------------------------------------- */
 /*                               Hex To Binnary                               */
 /* -------------------------------------------------------------------------- */
-string hexToBin(const string &s){
+string hexToBininary(const string &s)
+{
     string out;
-    for(auto i: s){
+    for (auto i : s)
+    {
         uint8_t n;
-        if(i <= '9' and i >= '0')
+        if (i <= '9' and i >= '0')
             n = i - '0';
         else
             n = 10 + i - 'A';
-        for(int8_t j = 3; j >= 0; --j)
-            out.push_back((n & (1<<j))? '1':'0');
+        for (int8_t j = 3; j >= 0; --j)
+            out.push_back((n & (1 << j)) ? '1' : '0');
     }
     return out;
 }
-
 
 /* -------------------------------------------------------------------------- */
 /*                                Binary To Hex                               */
 /* -------------------------------------------------------------------------- */
 
-string bintohex(const string &s){
+string binarytohex(const string &s)
+{
     string out;
-    for(uint i = 0; i < s.size(); i += 4){
+    for (uint i = 0; i < s.size(); i += 4)
+    {
         int8_t n = 0;
-        for(uint j = i; j < i + 4; ++j){
+        for (uint j = i; j < i + 4; ++j)
+        {
             n <<= 1;
-            if(s[j] == '1')
+            if (s[j] == '1')
                 n |= 1;
         }
 
-        if(n<=9)
+        if (n <= 9)
             out.push_back('0' + n);
         else
             out.push_back('A' + n - 10);
@@ -178,6 +220,100 @@ string COUNTER::set(string hexNumber)
 {
     positionCounter = hexNumber;
     return positionCounter;
+}
+
+/* -------------------------------------------------------------------------- */
+/* ------------------------- MEMORY ADDRESSING CLASS ------------------------ */
+/* -------------------------------------------------------------------------- */
+/* ------- Hold addressing values of memory and holds the address type ------ */
+/**
+ * Addressing type: [simple, indirect, immediate]
+ * Addressing value: [0007, 700, A, 5]
+ */
+class MEMORYADDRESS
+{
+private:
+    string type;
+    string value;
+
+public:
+    string get();
+    void setType(string);
+    void setValue(string);
+};
+string MEMORYADDRESS::get()
+{
+    if (!type.empty() && !value.empty())
+    {
+        string finalValue;
+    }
+    else
+    {
+        cout << "Error either the type or value was empty for the addressing class\n";
+    }
+    return "TODO";
+}
+void MEMORYADDRESS::setType(string newType)
+{
+    type = newType;
+}
+void MEMORYADDRESS::setValue(string newValue)
+{
+    type = newValue;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                  OUT CLASS                                 */
+/* -------------------------------------------------------------------------- */
+/* ----------------- Stores the final values to be outputed ----------------- */
+class OUTPUT
+{
+private:
+    string address;
+    string symbol;
+    string instruction;
+    MEMORYADDRESS location;
+    string opcode;
+    string nixbpe;
+
+public:
+    void setAddress(string);
+    void setSymbol(string);
+    void setInstruction(string);
+    void setLocation(string, string);
+    void setOpcode(string);
+    void setNixbpe(string);
+    void print();
+};
+void OUTPUT::setAddress(string newValue)
+{
+    address = newValue;
+}
+void OUTPUT::setSymbol(string newValue)
+{
+    symbol = newValue;
+}
+void OUTPUT::setInstruction(string newValue)
+{
+    instruction = newValue;
+}
+void OUTPUT::setLocation(string type, string value)
+{
+    location;
+    location.setType(type);
+    location.setValue(value);
+}
+void OUTPUT::setOpcode(string newValue)
+{
+    opcode = newValue;
+}
+void OUTPUT::setNixbpe(string newValue)
+{
+    nixbpe = newValue;
+}
+
+void OUTPUT::print(){
+    cout << "Address: " << address << "\n symbol: " << symbol << "\n instruction: " << instruction << "\nlocation: " << location.get() << "\n opcode: " << opcode << "\n nixbpe: " << nixbpe << "\n";
 }
 
 /* -------------------------------------------------------------------------- */
@@ -246,6 +382,35 @@ int opCodeToType(string opCode)
 }
 
 /* -------------------------------------------------------------------------- */
+/*                Addressing Type [Simple, Immediate, Indirect]               */
+/* -------------------------------------------------------------------------- */
+/**
+ * input: nixbpe
+ * output [Simple, Immediate, Indirect]
+ */
+string addressingType(string nixbpe)
+{
+    char i = nixbpe[1];
+    char n = nixbpe[0];
+    if (i == '0')
+    {
+        if (n == '0')
+            return "simple";
+        if (n == '1')
+            return "indirect";
+    }
+    if (i == '1')
+    {
+        if (n == '0')
+            return "simple";
+        if (n == '1')
+            return "immediate";
+    }
+    cout << "Error: Could not find addressing type. '" << nixbpe << "' is not a valid value\n";
+    exit(EXIT_FAILURE);
+}
+
+/* -------------------------------------------------------------------------- */
 /*                         Convert OP Code To Mnemonic                        */
 /* -------------------------------------------------------------------------- */
 /* ---------- Given an op code convert that to the correct mnemonic --------- */
@@ -265,38 +430,96 @@ string opCodeToMnemonic(string opCode)
 /* -------------------------------------------------------------------------- */
 /*                                Parse Opcodes                               */
 /* -------------------------------------------------------------------------- */
-vector<string> parseOpCodes(string opCodeToAnalyse, string opCodes, vector<string> &opcodesArray){
+vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray)
+{
+    OUTPUT outputValue;
+
+    if (opcodes == "")
+    {
+        return opcodesArray;
+    }
+
     /**
-     * take the first to letters of the opcode and convert to binary
+     * take the first two letters of the opcode and convert to binary
      * 6910083E174000024000 -> 69 -> 01101001
      */
-    string opCodeAsBinary = hexToBin(opCodeToAnalyse);
+    string opCodeAsBinary = hexToBininary(opcodes.substr(0, 2));
 
     /**
      * first 6 bits are opcode 011010 and the last 2 bits are ni of nixbpe
      * remove ni and get opcode as 01101000
      */
-    string opCodeRemovedExtras = opCodeAsBinary.substr(0,6) + "00";
+    string opCodeRemovedExtras = opCodeAsBinary.substr(0, 6) + "00";
 
     /** convert the binary value to hex 01101000 -> 68 */
-    string opCodeAsHex = bintohex(opCodeRemovedExtras);
+    string opCodeAsHex = binarytohex(opCodeRemovedExtras);
 
-    /**
-     * look up 68 as menmonic
-     * 68 -> LDB
-     */
-    string mnemonic = opcodeToMnemonic(opCodeAsHex);
+    if (isType3(opCodeAsHex))
+    {
 
-    string ni = opCodeAsBinary.substr(6,2);
-    string xbpe = hexToBin(opCodes.substr(2,1));
-    string nixbpe = ni + xbpe;
-    
-    cout << "NIXBPE: " << nixbpe << "\n";
+        /**
+        * look up 68 as menmonic 68 -> LDB
+        */
+        string mnemonic = opcodeToMnemonic(opCodeAsHex);
 
-    cout << "hex out: " << mnemonic << "\n";
+        /** store mnemonic in the output class */
+        outputValue.setInstruction(mnemonic);
+
+        /** Find nixbpe value */
+        string ni = opCodeAsBinary.substr(6, 2);
+        string xbpe = hexToBininary(opcodes.substr(2, 1));
+        string nixbpe = ni + xbpe;
+
+        /**
+         * Set the full opcode value from the opcodes string.
+         * This includes all 6 values for type 3,
+         * and 8 values for type 4.
+         */
+        string fullOpcode = opcodes.substr(0, 6);
+        outputValue.setOpcode(fullOpcode);
+
+        /** store nixbpe in the output class for final output. */
+        outputValue.setNixbpe(nixbpe);
+
+        /** Check if instruction is extended format. */
+        if (isType4(nixbpe))
+        {
+            /** If it is extended format update the mnemonic previously stored. */
+            mnemonic = "+" + mnemonic;
+            outputValue.setInstruction(mnemonic);
+
+            /**
+             * If extended format update opcode from 6 to 8 values.
+             * EG. 691008 -> 6910083E
+             */
+            string fullType4Opcode = opcodes.substr(0, 8);
+            outputValue.setOpcode(fullType4Opcode);
+
+            /** TYPE4: recursively recall the function but remove the address that was just analysed */
+            string newOpcodes = opcodes.substr(8, opcodes.length() - 8);
+            parseOpCodes(newOpcodes, opcodesArray);
+
+            cout << "-------------TYPE 4---------------\n";
+            outputValue.print();
+        }
+
+        cout << "-------------TYPE 3---------------\n";
+        outputValue.print();
+        /** TYPE3: recursively recall the function but remove the address that was just analysed */
+        string newOpcodes = opcodes.substr(6, opcodes.length() - 6);
+        parseOpCodes(opcodes.substr(6, opcodes.length()), opcodesArray);
+    }
+    else
+    {
+        /** TYPE2: recursively recall the function but remove the address that was just analysed */
+        cout << "-------------TYPE 2---------------\n";
+        outputValue.print();
+        string newOpcodes = opcodes.substr(4, opcodes.length() - 4);
+        parseOpCodes(opcodes.substr(4, opcodes.length()), opcodesArray);
+    }
+
     return opcodesArray;
 }
-
 
 /* -------------------------------------------------------------------------- */
 /*                                Parse Header                                */
@@ -333,12 +556,11 @@ bool parseTextRecord(string textLine, string &outFile, COUNTER &counter, vector<
 
     int opCodeLengthAsInt = hexToInt(textLine.substr(7, 2));
 
-    string allOpCodes = textLine.substr(9, opCodeLengthAsInt*2);
+    string allOpCodes = textLine.substr(9, opCodeLengthAsInt * 2);
 
+    vector<OUTPUT> opcodesArray;
 
-    vector<string> opcodesArray;
-
-    parseOpCodes(allOpCodes.substr(0,2), allOpCodes, opcodesArray);
+    parseOpCodes(allOpCodes, opcodesArray);
     return true;
 }
 
