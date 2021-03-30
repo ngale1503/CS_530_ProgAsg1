@@ -5,6 +5,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include<algorithm>
 
 using namespace std;
 std::stringstream ss;
@@ -217,10 +218,12 @@ string COUNTER::get()
     string value = COUNTER::positionCounter;
     int length = value.length();
 
-    if(length < 4){
-        value = std::string( (4-length), '0').append( value);
+    if (length < 4)
+    {
+        value = std::string((4 - length), '0').append(value);
     }
-    if(length > 4){
+    if (length > 4)
+    {
         value = value.substr((length)-4, 4);
     }
     return value;
@@ -442,7 +445,6 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
     OUTPUT outputValue;
     COUNTER textLocationCounter;
 
-
     if (opcodes.length() < 4)
     {
         return opcodesArray;
@@ -497,7 +499,7 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
             /** If it is extended format update the mnemonic previously stored. */
             mnemonic = "+" + mnemonic;
             outputValue.setInstruction(mnemonic);
-            cout <<"TYPE4 MNWMONIX " << mnemonic << "\n";
+            cout << "TYPE4 MNWMONIX " << mnemonic << "\n";
             /**
              * If extended format update opcode from 6 to 8 values.
              * EG. 691008 -> 6910083E
@@ -531,7 +533,7 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
         outputValue.print();
         parseOpCodes(opcodes.substr(4, opcodes.length()), opcodesArray, textLocationCounter.get());
     }
-    
+
     return opcodesArray;
 }
 
@@ -678,6 +680,112 @@ void mainParser(vector<string> objArray, string &outLstStr, COUNTER &counter)
 }
 
 /* -------------------------------------------------------------------------- */
+/*                                PARSE SYMBOLS                               */
+/* -------------------------------------------------------------------------- */
+/**
+ * input Symbols array stacked line by line
+ * output: 2d array with array of arrays which contain [location, symbol].
+ * EG. [[BADR,00000A],[RETADR,00083E]]
+ */
+vector<vector<string>> parseSymbols(vector<string> &symbolsArray)
+{
+
+    /** Create empty array to store subarrays. */
+    vector<vector<string>> locationAndSymbolsArray;
+
+    /** loop through all lines starting at line 2 to ignore useless stuff */
+    for (int i = 2; i < symbolsArray.size(); i++)
+    {
+
+        /** create a array to store locations Eg. [RETADR,00083E] */
+        vector<string> locationAndSymbol;
+
+        string currLine = symbolsArray.at(i);
+
+        /**
+         * Check is we have looked through all symbols.
+         * If yes, exit loop.
+         */
+        if (currLine == "")
+        {
+            break;
+        }
+
+        /** Store location and name in the array. */
+        string location = currLine.substr(8, 6);
+        string name = currLine.substr(0, 8);
+        locationAndSymbol.push_back(location);
+        locationAndSymbol.push_back(name);
+        locationAndSymbolsArray.push_back(locationAndSymbol);
+    }
+    return locationAndSymbolsArray;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               PARSE LITERALS                               */
+/* -------------------------------------------------------------------------- */
+/**
+ * input Symbols array stacked line by line
+ * output: 2d array with array of arrays which contain [Address, Literal, length].
+ * EG. [[000855,=X'000001',6],[001090, =X'000007', 6]]
+ */
+vector<vector<string>> parseLiterals(vector<string> &symbolsArray)
+{
+
+    /**
+     * keeps count of "--"
+     * First (1) "-" means we passed start of symbols.
+     * Second (2) "-" means we start the literals.
+     */
+    int areWeAtLiteralsYet = 0;
+
+    /** Create empty array to store subarrays. */
+    vector<vector<string>> literalsArrayContainer;
+
+    /** loop through all lines starting at line 2 to ignore useless stuff */
+    for (int i = 0; i < symbolsArray.size(); i++)
+    {
+        string currLine = symbolsArray.at(i);
+        if (areWeAtLiteralsYet >= 2)
+        {
+            /** create a array to store locations Eg. [RETADR,00083E] */
+            vector<string> literalsArray;
+
+            /** remove extra white space and tabs */
+            remove(currLine.begin(), currLine.end(), ' ');
+            remove(currLine.begin(), currLine.end(), '\t');
+
+            /**
+            * Check is we have looked through all symbols.
+            * If yes, exit loop.
+            */
+            if (!currLine.empty() && currLine.length() > 16)
+            {
+                /** Store location and name in the array. */
+                string location = currLine.substr(11, 6);
+                string literal = currLine.substr(0, 10);
+                string length = currLine.substr(10, 1);
+                
+                literalsArray.push_back(location);
+                literalsArray.push_back(literal);
+                literalsArray.push_back(length);
+                cout << "location: " << location << " litteral: " << literal << " length: " << length << "\n";
+                literalsArrayContainer.push_back(literalsArray);
+            }
+        }
+        else
+        {
+            /** Check if this line contains "-" */
+            if (!currLine.empty() && currLine[0] == '-')
+            {
+                areWeAtLiteralsYet++;
+            }
+        }
+    }
+    return literalsArrayContainer;
+}
+
+/* -------------------------------------------------------------------------- */
 /*                                    MAIN                                    */
 /* -------------------------------------------------------------------------- */
 
@@ -695,8 +803,8 @@ int main(int argc, char const *argv[])
     string inputFileName2 = argv[2];
 
     /** Storage for the files that have already been read */
-    vector<string> objArray;
-    vector<string> symArray;
+    std::vector<string> objArray;
+    std::vector<string> symArray;
 
     /** Final string that contains the out.lst */
     string outLstStr;
@@ -736,8 +844,12 @@ int main(int argc, char const *argv[])
     /** Create a new counter and attach a *counter pointer to it. */
     COUNTER *counter = new COUNTER;
 
-    /** Parse the object codes. */
-    mainParser(objArray, outLstStr, *counter);
+    /** Parse all the symbols and litterals from sym file. */
+    vector<vector<string>> symbols = parseSymbols(symArray);
+    vector<vector<string>> literals = parseLiterals(symArray);
 
-    writer(outLstStr);
+    /** Parse the object codes. */
+    //mainParser(objArray, outLstStr, *counter);
+
+   // writer(outLstStr);
 }
