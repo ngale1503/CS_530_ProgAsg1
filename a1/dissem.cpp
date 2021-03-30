@@ -549,7 +549,7 @@ bool parseHeader(string headerString, string &outFile, COUNTER &counter)
 /*                              Parse Text Record                             */
 /* -------------------------------------------------------------------------- */
 /** Out file is the final string that will be printed. */
-bool parseTextRecord(string textLine, string &outFile, COUNTER &counter, vector<vector<int>> modificationsArray)
+bool parseTextRecord(string textLine, string &outFile, COUNTER &counter, vector<vector<int> > modificationsArray)
 {
 
     string startingAddress = textLine.substr(1, 6);
@@ -580,9 +580,9 @@ bool parseModificationRecord(string modificationLine, string &outFile, COUNTER &
  * input: [H**,T**,M00000105,M00085905, E**]
  * output: [[M000001, 05],[000859, 05]]
  */
-vector<vector<int>> extractModificationRecords(vector<string> &objArray)
+vector<vector<int> > extractModificationRecords(vector<string> &objArray)
 {
-    vector<vector<int>> modificationsArray;
+    vector<vector<int> > modificationsArray;
     int modificationRecordsCount = 0;
     /** loop through the obj file and read in the translations */
     for (int i = 0; i < objArray.size(); i += 1)
@@ -633,7 +633,7 @@ void mainParser(vector<string> objArray, string &outLstStr, COUNTER &counter)
      *      [[where to modify, length of address field to be modified in half bytes], [..], ..]
      *      EX: [[M000001, 05],[000859, 05]]
      */
-    vector<vector<int>> modificationsArray = extractModificationRecords(objArray);
+    vector<vector<int> > modificationsArray = extractModificationRecords(objArray);
 
     /** loop through the obj file and read in the translations */
     for (int i = 0; i < objArray.size(); i += 1)
