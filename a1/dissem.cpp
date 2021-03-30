@@ -849,7 +849,7 @@ int main(int argc, char const *argv[])
     vector<vector<string>> literals = parseLiterals(symArray);
 
     /** Parse the object codes. */
-    //mainParser(objArray, outLstStr, *counter);
+    mainParser(objArray, outLstStr, *counter);
 
-   // writer(outLstStr);
+   writer(outLstStr);
 }
