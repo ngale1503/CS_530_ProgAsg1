@@ -440,7 +440,7 @@ string opCodeToMnemonic(string opCode)
 /* -------------------------------------------------------------------------- */
 /*                                Parse Opcodes                               */
 /* -------------------------------------------------------------------------- */
-vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string startingAddress)
+vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string startingAddress, vector<vector<string> > symbolsArray, vector<vector<string> > &literalsArray)
 {
     OUTPUT outputValue;
     COUNTER textLocationCounter;
@@ -453,6 +453,22 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
     textLocationCounter.set(startingAddress);
     /** store the current address to be printed out later */
     outputValue.setAddress(textLocationCounter.get());
+
+    // Check if a symbol maches any location at current location
+    for(int i = 0; i < symbolsArray.size(); i++){
+        string currentLocation = "00"+textLocationCounter.get();
+        if(currentLocation == symbolsArray[i][0]){
+            outputValue.setSymbol(symbolsArray[i][1]);
+        }
+    }
+
+    // Check if a literal maches any location at current location
+    for(int i = 0; i < literalsArray.size(); i++){
+        string currentLocation = "00"+textLocationCounter.get();
+        if(currentLocation == literalsArray[i][0]){
+            outputValue.setSymbol(literalsArray[i][1]);
+        }
+    }
     /**
      * take the first two letters of the opcode and convert to binary
      * 6910083E174000024000 -> 69 -> 01101001
@@ -512,7 +528,7 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
             /** store the current address to be printed out later */
             textLocationCounter.add("4");
             outputValue.print();
-            parseOpCodes(newOpcodes, opcodesArray, textLocationCounter.get());
+            parseOpCodes(newOpcodes, opcodesArray, textLocationCounter.get(), symbolsArray, literalsArray);
         }
         else
         {
@@ -520,7 +536,7 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
             string newOpcodes = opcodes.substr(6, opcodes.length() - 6);
             textLocationCounter.add("3");
             outputValue.print();
-            parseOpCodes(opcodes.substr(6, opcodes.length()), opcodesArray, textLocationCounter.get());
+            parseOpCodes(opcodes.substr(6, opcodes.length()), opcodesArray, textLocationCounter.get(), symbolsArray, literalsArray);
         }
     }
     else
@@ -531,7 +547,7 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
         outputValue.setInstruction(mnemonic);
         textLocationCounter.add("2");
         outputValue.print();
-        parseOpCodes(opcodes.substr(4, opcodes.length()), opcodesArray, textLocationCounter.get());
+        parseOpCodes(opcodes.substr(4, opcodes.length()), opcodesArray, textLocationCounter.get(), symbolsArray, literalsArray);
     }
 
     return opcodesArray;
@@ -544,7 +560,7 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
  * Take the header record extract the name and add it to the pointer to the outFile
  * Out file is the final string that will be printed.
  */
-bool parseHeader(string headerString, string &outFile, COUNTER &counter)
+bool parseHeader(string headerString, string &outFile)
 {
     string spacer = "     ";
     string name = headerString.substr(1, 6);
@@ -565,7 +581,7 @@ bool parseHeader(string headerString, string &outFile, COUNTER &counter)
 /*                              Parse Text Record                             */
 /* -------------------------------------------------------------------------- */
 /** Out file is the final string that will be printed. */
-bool parseTextRecord(string textLine, string &outFile, COUNTER &counter, vector<vector<int>> modificationsArray)
+bool parseTextRecord(string textLine, string &outFile, vector<vector<int>> modificationsArray, vector<vector<string> > symbolsArray, vector<vector<string> > literalsArray)
 {
 
     string startingAddress = textLine.substr(1, 6);
@@ -576,7 +592,7 @@ bool parseTextRecord(string textLine, string &outFile, COUNTER &counter, vector<
 
     vector<OUTPUT> opcodesArray;
 
-    parseOpCodes(allOpCodes, opcodesArray, startingAddress);
+    parseOpCodes(allOpCodes, opcodesArray, startingAddress, symbolsArray, literalsArray);
     return true;
 }
 
@@ -628,7 +644,7 @@ vector<vector<int>> extractModificationRecords(vector<string> &objArray)
 /* -------------------------------------------------------------------------- */
 /*                              Parse End Record                              */
 /* -------------------------------------------------------------------------- */
-bool parseEndRecord(string endLine, string &outFile, COUNTER &counter)
+bool parseEndRecord(string endLine, string &outFile)
 {
     string spacer = "     ";
     outFile += spacer + spacer + "END" + spacer + "First";
@@ -642,7 +658,7 @@ bool parseEndRecord(string endLine, string &outFile, COUNTER &counter)
   * takes the object code and splits it into header, text, modification and end record.
   * After spliting it sends it to its individual parsers
   */
-void mainParser(vector<string> objArray, string &outLstStr, COUNTER &counter)
+void mainParser(vector<string> objArray, string &outLstStr, vector<vector<string> > symbolsArray, vector<vector<string> > literalsArray)
 {
     /**
      * 2D array contains extracted modification records [M 000001 05] [M 000859 05]:
@@ -659,15 +675,15 @@ void mainParser(vector<string> objArray, string &outLstStr, COUNTER &counter)
         switch (lineType)
         {
         case 'H':
-            parseHeader(line, outLstStr, counter);
+            parseHeader(line, outLstStr);
             break;
         case 'T':
             /** TODO */
-            parseTextRecord(line, outLstStr, counter, modificationsArray);
+            parseTextRecord(line, outLstStr, modificationsArray, symbolsArray, literalsArray);
             break;
         case 'E':
             /** TODO */
-            parseEndRecord(line, outLstStr, counter);
+            parseEndRecord(line, outLstStr);
             break;
         case 'M':
             /** Do Nothing */
@@ -685,7 +701,7 @@ void mainParser(vector<string> objArray, string &outLstStr, COUNTER &counter)
 /**
  * input Symbols array stacked line by line
  * output: 2d array with array of arrays which contain [location, symbol].
- * EG. [[BADR,00000A],[RETADR,00083E]]
+ * EG. [[00000A,BADR],[00083E, RETADR]]
  */
 vector<vector<string>> parseSymbols(vector<string> &symbolsArray)
 {
@@ -845,11 +861,11 @@ int main(int argc, char const *argv[])
     COUNTER *counter = new COUNTER;
 
     /** Parse all the symbols and litterals from sym file. */
-    vector<vector<string>> symbols = parseSymbols(symArray);
-    vector<vector<string>> literals = parseLiterals(symArray);
+    vector<vector<string> > symbols = parseSymbols(symArray);
+    vector<vector<string> > literals = parseLiterals(symArray);
 
     /** Parse the object codes. */
-    mainParser(objArray, outLstStr, *counter);
+    mainParser(objArray, outLstStr, symbols, literals);
 
    writer(outLstStr);
 }
