@@ -255,9 +255,11 @@ public:
 };
 string MEMORYADDRESS::get()
 {
+    cout << "Type: " + type + " value: " + value << "\n";
     if (!type.empty() && !value.empty())
     {
         string finalValue;
+        return "Type: " + type + " value: " + value; 
     }
     return "Error either the type or value was empty for the addressing class\n";
 }
@@ -438,6 +440,31 @@ string opCodeToMnemonic(string opCode)
 }
 
 /* -------------------------------------------------------------------------- */
+/*                          Get Type 2 register Name                          */
+/* -------------------------------------------------------------------------- */
+string getType2Register(char registerNumber){
+      switch (registerNumber) {           //output register name for first register operand
+        case '0':
+            return "A";
+        case '1':
+            return "X";
+        case '2':
+            return "L";
+        case '3':
+            return "B";
+        case '4':
+            return "S";
+        case '5':
+            return "T";
+        case '6':
+            return "F";
+        default:
+            cout << "ERROR: TYPE 2 register was not found.\n Expected values [0-6] but recived " << registerNumber << "\n";
+            exit(EXIT_FAILURE);
+    }
+}
+
+/* -------------------------------------------------------------------------- */
 /*                                Parse Opcodes                               */
 /* -------------------------------------------------------------------------- */
 vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string startingAddress, vector<vector<string> > symbolsArray, vector<vector<string> > &literalsArray)
@@ -542,10 +569,21 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
     else
     {
         /** TYPE2: recursively recall the function but remove the address that was just analysed */
-        string newOpcodes = opcodes.substr(4, opcodes.length() - 4);
         string mnemonic = opcodeToMnemonic(opCodeAsHex);
         outputValue.setInstruction(mnemonic);
+        outputValue.setOpcode(opcodes.substr(0, 4));
         textLocationCounter.add("2");
+
+        // Get type 2 address
+        char r1 = opcodes[3];
+        char r2 = opcodes[4];
+        string register1 = getType2Register(r1);
+        string register2 = getType2Register(r1);
+        if(register1 == register2){
+            outputValue.setAddress((register1+""));
+        }else{
+            outputValue.setAddress((register1+","+register2));
+        }
         outputValue.print();
         parseOpCodes(opcodes.substr(4, opcodes.length()), opcodesArray, textLocationCounter.get(), symbolsArray, literalsArray);
     }
