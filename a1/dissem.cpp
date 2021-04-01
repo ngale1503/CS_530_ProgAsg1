@@ -741,11 +741,12 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
  * Take the header record extract the name and add it to the pointer to the outFile
  * Out file is the final string that will be printed.
  */
+static string programName;
 string parseHeader(string headerString, string &outFile)
 {
     string spacer = "     ";
     string name = headerString.substr(1, 6);
-
+    programName = name;
     string startingAddress = headerString.substr(7, 6);
     string endingAddress = headerString.substr(13, 6);
 
@@ -824,10 +825,12 @@ vector<vector<int>> extractModificationRecords(vector<string> &objArray)
 /* -------------------------------------------------------------------------- */
 /*                              Parse End Record                              */
 /* -------------------------------------------------------------------------- */
+static string endString;
 bool parseEndRecord(string endLine, string &outFile)
 {
     string spacer = "     ";
-    outFile += spacer + spacer + "END" + spacer + "First";
+    outFile += spacer + spacer + "END" + spacer + programName;
+    endString = spacer + spacer + "END" + spacer + programName;
     return true;
 }
 
@@ -853,10 +856,13 @@ string createFinalOutput(string header, vector<OUTPUT> finalArray){
             }
         }
         string spacer = "     ";
-        string symb;
-        symb = line.symbol.empty() ? spacer : line.symbol;
-        finalString += line.address + spacer+ line.symbol  + spacer + line.instruction + spacer + location + spacer + line.opcode + "\n";
+        string symb = line.symbol.empty() ? "" : line.symbol;
+        if(symb.substr(0,3) == "=X'"){
+            symb = "*";
+        }
+        finalString += line.address + spacer+ symb  + spacer + line.instruction + spacer + location + spacer + line.opcode + "\n";
     }
+    finalString += endString;
     writer(finalString);
     cout << finalString << "\n";
     return finalString;
@@ -891,15 +897,12 @@ void mainParser(vector<string> objArray, string &outLstStr, vector<vector<string
             head = parseHeader(line, outLstStr);
             break;
         case 'T':
-            /** TODO */
             parseTextRecord(line, outLstStr, modificationsArray, symbolsArray, literalsArray, finalOutput);
             break;
         case 'E':
-            /** TODO */
             parseEndRecord(line, outLstStr);
             break;
         case 'M':
-            /** Do Nothing */
             break;
         default:
             cout << "Unsupported type: " << line << "\n";
