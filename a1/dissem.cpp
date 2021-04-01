@@ -5,10 +5,16 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include<algorithm>
+#include <algorithm>
 
 using namespace std;
 std::stringstream ss;
+
+ /** Final string that contains the out.lst */
+static string outLstStr;
+static string base;
+static vector<vector<string> > allSymbols;
+static vector<vector<string> > allLiterals;
 
 /* -------------------------------------------------------------------------- */
 /*                                  Operands                                  */
@@ -235,6 +241,56 @@ string COUNTER::set(string hexNumber)
 }
 
 /* -------------------------------------------------------------------------- */
+/*          Compute Target Address given a simple type and an address         */
+/* -------------------------------------------------------------------------- */
+// nixbpe: 
+string computeTA(string nixbpe, string address, string location)
+{
+    char b = nixbpe[3];
+    char p = nixbpe[4];
+    char x = nixbpe[2];
+    if (b == '0')
+    {
+        if (p == '0')
+        {
+            if(x == '1'){
+                // Index + direct
+                string index = address;
+                string direct = location;
+
+                int indexAsInt = hexToInt(index);
+                int directAsInt = hexToInt(direct);
+                
+                int value = indexAsInt + directAsInt;
+                return intToHex(value);
+            }
+        }
+
+        if(p == '1'){
+            if(x == '1'){
+                //index+ pc relative
+            }
+        }
+    }
+    if (b == '1')
+    {
+        if (p == '0')
+        {
+            if(x == '1'){
+                // index + base relative
+
+            }
+            //BASE RELATIVE
+        }
+        if (p == '1')
+        {
+            //PC RELATIVE
+        }
+    }
+    return location;
+}
+
+/* -------------------------------------------------------------------------- */
 /* ------------------------- MEMORY ADDRESSING CLASS ------------------------ */
 /* -------------------------------------------------------------------------- */
 /* ------- Hold addressing values of memory and holds the address type ------ */
@@ -249,17 +305,54 @@ private:
     string value;
 
 public:
-    string get();
+    string get(string, string);
+    string extra;
     void setType(string);
     void setValue(string);
 };
-string MEMORYADDRESS::get()
+string MEMORYADDRESS::get(string nixbpe, string address)
 {
-    cout << "Type: " + type + " value: " + value << "\n";
     if (!type.empty() && !value.empty())
     {
+        if (type == "immediate")
+        {
+            string str = value;
+            str.erase(0, min(str.find_first_not_of('0'), str.size() - 1));
+             for(int i = 0; i < allSymbols.size(); i++){
+                string symbolLocation = allSymbols[i][0];
+                symbolLocation.erase(0, min(symbolLocation.find_first_not_of('0'), symbolLocation.size()-1));
+
+                str.erase(0, min(str.find_first_not_of('0'), str.size()-1));
+                if(symbolLocation == str){
+                    return "#" + allSymbols[i][1];
+                }
+            }
+            return "#" + str;
+        }
+
+        if (type == "simple")
+        {
+            return computeTA(nixbpe, address, value);
+        }
+
+        if( type == "indirect" || type == "base" || type == "LDB"){
+            for(int i = 0; i < allSymbols.size(); i++){
+                string symbolLocation = allSymbols[i][0];
+                symbolLocation.erase(0, min(symbolLocation.find_first_not_of('0'), symbolLocation.size()-1));
+                string newValue = value;
+                newValue.erase(0, min(newValue.find_first_not_of('0'), newValue.size()-1));
+                if(symbolLocation == newValue){
+                    return allSymbols[i][1];
+                }
+            }
+        }
+
+        if (type == "type2" || type == "litteral")
+        {
+            return value;
+        }
         string finalValue;
-        return "Type: " + type + " value: " + value; 
+        return "Type: " + type + " value: " + value;
     }
     return "Error either the type or value was empty for the addressing class\n";
 }
@@ -269,7 +362,7 @@ void MEMORYADDRESS::setType(string newType)
 }
 void MEMORYADDRESS::setValue(string newValue)
 {
-    type = newValue;
+    value = newValue;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -278,14 +371,6 @@ void MEMORYADDRESS::setValue(string newValue)
 /* ----------------- Stores the final values to be outputed ----------------- */
 class OUTPUT
 {
-private:
-    string address;
-    string symbol;
-    string instruction;
-    MEMORYADDRESS location;
-    string opcode;
-    string nixbpe;
-
 public:
     void setAddress(string);
     void setSymbol(string);
@@ -294,6 +379,12 @@ public:
     void setOpcode(string);
     void setNixbpe(string);
     void print();
+    string address;
+    string symbol;
+    string instruction;
+    MEMORYADDRESS location;
+    string opcode;
+    string nixbpe;
 };
 void OUTPUT::setAddress(string newValue)
 {
@@ -324,15 +415,16 @@ void OUTPUT::setNixbpe(string newValue)
 
 void OUTPUT::print()
 {
-    cout << "Address: " << address << "\n symbol: " << symbol << "\n instruction: " << instruction << "\nlocation: " << location.get() << " opcode: " << opcode << "\n nixbpe: " << nixbpe << "\n";
-    cout << "-------------------------------------------------\n";
+    //cout << address << '\n';
+    //cout << "Address: " << address << "\n symbol: " << symbol << "\n instruction: " << instruction << "\nlocation: " << location.get(nixbpe, address) << "\n opcode: " << opcode << "\n nixbpe: " << nixbpe << "\n";
+    //cout << "-------------------------------------------------\n";
 }
 
 /* -------------------------------------------------------------------------- */
 /*                                   Writer                                   */
 /* -------------------------------------------------------------------------- */
 bool writer(string input)
-{
+{ 
     fstream outFile;
     outFile.open("out.lst", ios::out);
     if (!outFile)
@@ -404,19 +496,19 @@ string addressingType(string nixbpe)
 {
     char i = nixbpe[1];
     char n = nixbpe[0];
-    if (i == '0')
+    if (n == '0')
     {
-        if (n == '0')
+        if (i == '0')
             return "simple";
-        if (n == '1')
-            return "indirect";
-    }
-    if (i == '1')
-    {
-        if (n == '0')
-            return "simple";
-        if (n == '1')
+        if (i == '1')
             return "immediate";
+    }
+    if (n == '1')
+    {
+        if (i == '0')
+            return "indirect";
+        if (i == '1')
+            return "simple";
     }
     cout << "Error: Could not find addressing type. '" << nixbpe << "' is not a valid value\n";
     exit(EXIT_FAILURE);
@@ -442,32 +534,62 @@ string opCodeToMnemonic(string opCode)
 /* -------------------------------------------------------------------------- */
 /*                          Get Type 2 register Name                          */
 /* -------------------------------------------------------------------------- */
-string getType2Register(char registerNumber){
-      switch (registerNumber) {           //output register name for first register operand
-        case '0':
-            return "A";
-        case '1':
-            return "X";
-        case '2':
-            return "L";
-        case '3':
-            return "B";
-        case '4':
-            return "S";
-        case '5':
-            return "T";
-        case '6':
-            return "F";
-        default:
-            cout << "ERROR: TYPE 2 register was not found.\n Expected values [0-6] but recived " << registerNumber << "\n";
-            exit(EXIT_FAILURE);
+string getType2Register(char registerNumber)
+{
+    switch (registerNumber)
+    { //output register name for first register operand
+    case '0':
+        return "A";
+    case '1':
+        return "X";
+    case '2':
+        return "L";
+    case '3':
+        return "B";
+    case '4':
+        return "S";
+    case '5':
+        return "T";
+    case '6':
+        return "F";
+    default:
+        cout << "ERROR: TYPE 2 register was not found.\n Expected values [0-6] but recived " << registerNumber << "\n";
+        exit(EXIT_FAILURE);
+    }
+}
+
+string hexAdd(string str1, string str2){
+    int str1AsInt = hexToInt(str1);
+    int str2AsInt = hexToInt(str2);
+    int result = str1AsInt + str2AsInt;
+    return intToHex(result);
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*                          Target address calculator                         */
+/* -------------------------------------------------------------------------- */
+/* --------------------- calculate type 3 target address -------------------- */
+
+string getTA(string locationValue, string currentAddress, string nixbpe){
+    char b = nixbpe[3];
+    char p = nixbpe[3];
+    if(b == '1'){
+        
+        return hexAdd(base, locationValue);
+    }
+    else if (p == '1'){
+        return hexAdd(hexAdd(currentAddress, locationValue), "3");
+    }
+    else {
+        return locationValue;
     }
 }
 
 /* -------------------------------------------------------------------------- */
 /*                                Parse Opcodes                               */
 /* -------------------------------------------------------------------------- */
-vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string startingAddress, vector<vector<string> > symbolsArray, vector<vector<string> > &literalsArray)
+vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string startingAddress, vector<vector<string>> symbolsArray, vector<vector<string>> &literalsArray)
 {
     OUTPUT outputValue;
     COUNTER textLocationCounter;
@@ -482,17 +604,21 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
     outputValue.setAddress(textLocationCounter.get());
 
     // Check if a symbol maches any location at current location
-    for(int i = 0; i < symbolsArray.size(); i++){
-        string currentLocation = "00"+textLocationCounter.get();
-        if(currentLocation == symbolsArray[i][0]){
+    for (int i = 0; i < symbolsArray.size(); i++)
+    {
+        string currentLocation = "00" + textLocationCounter.get();
+        if (currentLocation == symbolsArray[i][0])
+        {
             outputValue.setSymbol(symbolsArray[i][1]);
         }
     }
 
     // Check if a literal maches any location at current location
-    for(int i = 0; i < literalsArray.size(); i++){
-        string currentLocation = "00"+textLocationCounter.get();
-        if(currentLocation == literalsArray[i][0]){
+    for (int i = 0; i < literalsArray.size(); i++)
+    {
+        string currentLocation = "00" + textLocationCounter.get();
+        if (currentLocation == literalsArray[i][0])
+        {
             outputValue.setSymbol(literalsArray[i][1]);
         }
     }
@@ -542,29 +668,41 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
             /** If it is extended format update the mnemonic previously stored. */
             mnemonic = "+" + mnemonic;
             outputValue.setInstruction(mnemonic);
-            cout << "TYPE4 MNWMONIX " << mnemonic << "\n";
+
             /**
              * If extended format update opcode from 6 to 8 values.
              * EG. 691008 -> 6910083E
              */
             string fullType4Opcode = opcodes.substr(0, 8);
             outputValue.setOpcode(fullType4Opcode);
-
+            outputValue.setLocation(addressingType(nixbpe), opcodes.substr(3, 5));
             /** TYPE4: recursively recall the function but remove the address that was just analysed */
             string newOpcodes = opcodes.substr(8, opcodes.length() - 8);
             /** store the current address to be printed out later */
             textLocationCounter.add("4");
             outputValue.print();
+            opcodesArray.push_back(outputValue);
+            if(opCodeAsHex == "68"){
+                base = opcodes.substr(3, 5);
+                OUTPUT newOutputValue;
+                newOutputValue.setInstruction("BASE");
+                newOutputValue.setLocation("base", base);
+                newOutputValue.print();
+                opcodesArray.push_back(newOutputValue);
+            }
             parseOpCodes(newOpcodes, opcodesArray, textLocationCounter.get(), symbolsArray, literalsArray);
         }
         else
         {
             /** TYPE3: recursively recall the function but remove the address that was just analysed */
             string newOpcodes = opcodes.substr(6, opcodes.length() - 6);
+            outputValue.setLocation(addressingType(nixbpe), opcodes.substr(3, 3));
             textLocationCounter.add("3");
             outputValue.print();
+            opcodesArray.push_back(outputValue);
             parseOpCodes(opcodes.substr(6, opcodes.length()), opcodesArray, textLocationCounter.get(), symbolsArray, literalsArray);
         }
+
     }
     else
     {
@@ -579,12 +717,17 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
         char r2 = opcodes[4];
         string register1 = getType2Register(r1);
         string register2 = getType2Register(r1);
-        if(register1 == register2){
-            outputValue.setAddress((register1+""));
-        }else{
-            outputValue.setAddress((register1+","+register2));
+        if (register1 == register2)
+        {
+            outputValue.setLocation("type2", register1);
+        }
+        else
+        {
+            string value = register1 + "," + register2;
+            outputValue.setLocation("type2", value);
         }
         outputValue.print();
+        opcodesArray.push_back(outputValue);
         parseOpCodes(opcodes.substr(4, opcodes.length()), opcodesArray, textLocationCounter.get(), symbolsArray, literalsArray);
     }
 
@@ -598,7 +741,7 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
  * Take the header record extract the name and add it to the pointer to the outFile
  * Out file is the final string that will be printed.
  */
-bool parseHeader(string headerString, string &outFile)
+string parseHeader(string headerString, string &outFile)
 {
     string spacer = "     ";
     string name = headerString.substr(1, 6);
@@ -612,14 +755,14 @@ bool parseHeader(string headerString, string &outFile)
     string programSizeInBytes = intToHex(endingAddressAsInt - startingAddressAsInt + 1);
 
     outFile = "0000" + spacer + name + spacer + spacer + "START" + spacer + "0\n";
-    return true;
+    return outFile;
 }
 
 /* -------------------------------------------------------------------------- */
 /*                              Parse Text Record                             */
 /* -------------------------------------------------------------------------- */
 /** Out file is the final string that will be printed. */
-bool parseTextRecord(string textLine, string &outFile, vector<vector<int>> modificationsArray, vector<vector<string> > symbolsArray, vector<vector<string> > literalsArray)
+vector<OUTPUT> parseTextRecord(string textLine, string &outFile, vector<vector<int>> modificationsArray, vector<vector<string>> symbolsArray, vector<vector<string>> literalsArray, vector<OUTPUT> &finalOutput)
 {
 
     string startingAddress = textLine.substr(1, 6);
@@ -628,10 +771,9 @@ bool parseTextRecord(string textLine, string &outFile, vector<vector<int>> modif
 
     string allOpCodes = textLine.substr(9, opCodeLengthAsInt * 2);
 
-    vector<OUTPUT> opcodesArray;
 
-    parseOpCodes(allOpCodes, opcodesArray, startingAddress, symbolsArray, literalsArray);
-    return true;
+    parseOpCodes(allOpCodes, finalOutput, startingAddress, symbolsArray, literalsArray);
+    return finalOutput;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -690,13 +832,44 @@ bool parseEndRecord(string endLine, string &outFile)
 }
 
 /* -------------------------------------------------------------------------- */
+/*                             Create Final Output                            */
+/* -------------------------------------------------------------------------- */
+string createFinalOutput(string header, vector<OUTPUT> finalArray){
+    string finalString = header;
+    for(int i = 0; i < finalArray.size(); i++){
+        OUTPUT line = finalArray.at(i);
+
+
+        // Check for any litteral replacement
+        string str = line.address;
+        string location = line.location.get(line.nixbpe, line.address);
+        str.erase(0, min(str.find_first_not_of('0'), str.size() - 1));
+            for(int i = 0; i < allLiterals.size(); i++){
+            string literalsAddress = allLiterals[i][0];
+            literalsAddress.erase(0, min(literalsAddress.find_first_not_of('0'), literalsAddress.size()-1));
+            if(literalsAddress == str){
+                //cout << "value: " << str  << "  litteral:" << literalsAddress << "\n";
+                location = allLiterals[i][1];
+            }
+        }
+        string spacer = "     ";
+        string symb;
+        symb = line.symbol.empty() ? spacer : line.symbol;
+        finalString += line.address + spacer+ line.symbol  + spacer + line.instruction + spacer + location + spacer + line.opcode + "\n";
+    }
+    writer(finalString);
+    cout << finalString << "\n";
+    return finalString;
+}
+
+/* -------------------------------------------------------------------------- */
 /*                                 Main Parser                                */
 /* -------------------------------------------------------------------------- */
 /**
   * takes the object code and splits it into header, text, modification and end record.
   * After spliting it sends it to its individual parsers
   */
-void mainParser(vector<string> objArray, string &outLstStr, vector<vector<string> > symbolsArray, vector<vector<string> > literalsArray)
+void mainParser(vector<string> objArray, string &outLstStr, vector<vector<string>> symbolsArray, vector<vector<string>> literalsArray)
 {
     /**
      * 2D array contains extracted modification records [M 000001 05] [M 000859 05]:
@@ -704,6 +877,8 @@ void mainParser(vector<string> objArray, string &outLstStr, vector<vector<string
      *      EX: [[M000001, 05],[000859, 05]]
      */
     vector<vector<int>> modificationsArray = extractModificationRecords(objArray);
+    vector<OUTPUT> finalOutput;
+    string head;
 
     /** loop through the obj file and read in the translations */
     for (int i = 0; i < objArray.size(); i += 1)
@@ -713,11 +888,11 @@ void mainParser(vector<string> objArray, string &outLstStr, vector<vector<string
         switch (lineType)
         {
         case 'H':
-            parseHeader(line, outLstStr);
+            head = parseHeader(line, outLstStr);
             break;
         case 'T':
             /** TODO */
-            parseTextRecord(line, outLstStr, modificationsArray, symbolsArray, literalsArray);
+            parseTextRecord(line, outLstStr, modificationsArray, symbolsArray, literalsArray, finalOutput);
             break;
         case 'E':
             /** TODO */
@@ -731,6 +906,8 @@ void mainParser(vector<string> objArray, string &outLstStr, vector<vector<string
             exit(EXIT_FAILURE);
         }
     }
+
+    createFinalOutput(head, finalOutput);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -819,11 +996,11 @@ vector<vector<string>> parseLiterals(vector<string> &symbolsArray)
                 string location = currLine.substr(11, 6);
                 string literal = currLine.substr(0, 10);
                 string length = currLine.substr(10, 1);
-                
+
                 literalsArray.push_back(location);
                 literalsArray.push_back(literal);
                 literalsArray.push_back(length);
-                cout << "location: " << location << " litteral: " << literal << " length: " << length << "\n";
+                //cout << "location: " << location << " litteral: " << literal << " length: " << length << "\n";
                 literalsArrayContainer.push_back(literalsArray);
             }
         }
@@ -859,9 +1036,6 @@ int main(int argc, char const *argv[])
     /** Storage for the files that have already been read */
     std::vector<string> objArray;
     std::vector<string> symArray;
-
-    /** Final string that contains the out.lst */
-    string outLstStr;
 
     /* ---------------------------- Check Valid Input --------------------------- */
 
@@ -899,11 +1073,9 @@ int main(int argc, char const *argv[])
     COUNTER *counter = new COUNTER;
 
     /** Parse all the symbols and litterals from sym file. */
-    vector<vector<string> > symbols = parseSymbols(symArray);
-    vector<vector<string> > literals = parseLiterals(symArray);
+    allSymbols = parseSymbols(symArray);
+    allLiterals = parseLiterals(symArray);
 
     /** Parse the object codes. */
-    mainParser(objArray, outLstStr, symbols, literals);
-
-   writer(outLstStr);
+    mainParser(objArray, outLstStr, allSymbols, allLiterals);
 }
