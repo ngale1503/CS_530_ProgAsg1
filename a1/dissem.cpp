@@ -10,11 +10,12 @@
 using namespace std;
 std::stringstream ss;
 
- /** Final string that contains the out.lst */
+/** Final string that contains the out.lst */
 static string outLstStr;
 static string base;
-static vector<vector<string> > allSymbols;
-static vector<vector<string> > allLiterals;
+static string lastUsedAddress;
+static vector<vector<string>> allSymbols;
+static vector<vector<string>> allLiterals;
 
 /* -------------------------------------------------------------------------- */
 /*                                  Operands                                  */
@@ -77,42 +78,6 @@ const static int instructionType[] = {
     3, 3, 3, 3, 3, 3,
     3, 3, 3, 3, 2, 2,
     3, 1, 3, 2, 3};
-
-/* -------------------------------------------------------------------------- */
-/*                             Check Type 3 Format                            */
-/* -------------------------------------------------------------------------- */
-/* -- Checks if an operand instruction is type 3 and return true or false. -- */
-bool isType3(string opcode)
-{
-    for (int i = 0; i < 60; i++)
-    {
-        if (ops[i] == opcode)
-        {
-            if (instructionType[i] == 3)
-            {
-                return true;
-            }
-            return false;
-        }
-    }
-    cout << "ERROR: OPCODE NOT FOUND!\n OPCODE WITH THE STRING: " << opcode << " WAS NOT FOUND. CAN NOT RETURN INSTRUCTION TYPE\n";
-    exit(EXIT_FAILURE);
-}
-
-/* -------------------------------------------------------------------------- */
-/*              Check if instruction is type 4 [EXTENTED FORMAT]              */
-/* -------------------------------------------------------------------------- */
-/* --- Given nixbpe it return true is the instruction is type 4 else false -- */
-bool isType4(string nixbpe)
-{
-    char e = nixbpe[5];
-    if (e == '1')
-        return true;
-    if (e == '0')
-        return false;
-    cout << "Error: Could not tell type of 'e' in 'nixbpe', value of e was read as " << e << "\n";
-    exit(EXIT_FAILURE);
-}
 
 /* -------------------------------------------------------------------------- */
 /*                                 Hex To Int                                 */
@@ -184,6 +149,75 @@ string binarytohex(const string &s)
 }
 
 /* -------------------------------------------------------------------------- */
+/*                               Add Hex Number                               */
+/* -------------------------------------------------------------------------- */
+string hexAdd(string str1, string str2)
+{
+    int str1AsInt = hexToInt(str1);
+    int str2AsInt = hexToInt(str2);
+    int result = str1AsInt + str2AsInt;
+    return intToHex(result);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            Subtract Hex Numbers                            */
+/* -------------------------------------------------------------------------- */
+
+string hexSubtract(string str1, string str2)
+{
+    int str1AsInt = hexToInt(str1);
+    int str2AsInt = hexToInt(str2);
+    int result = str1AsInt - str2AsInt;
+    return intToHex(result);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                             Remove Leading 0's                             */
+/* -------------------------------------------------------------------------- */
+/* ------------------------ input: 00001 -> output: 1 ----------------------- */
+string removeLeading0z(string str)
+{
+    str.erase(0, min(str.find_first_not_of('0'), str.size() - 1));
+    return str;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                             Check Type 3 Format                            */
+/* -------------------------------------------------------------------------- */
+/* -- Checks if an operand instruction is type 3 and return true or false. -- */
+bool isType3(string opcode)
+{
+    for (int i = 0; i < 60; i++)
+    {
+        if (ops[i] == opcode)
+        {
+            if (instructionType[i] == 3)
+            {
+                return true;
+            }
+            return false;
+        }
+    }
+    cout << "ERROR: OPCODE NOT FOUND!\n OPCODE WITH THE STRING: " << opcode << " WAS NOT FOUND. CAN NOT RETURN INSTRUCTION TYPE\n";
+    exit(EXIT_FAILURE);
+}
+
+/* -------------------------------------------------------------------------- */
+/*              Check if instruction is type 4 [EXTENTED FORMAT]              */
+/* -------------------------------------------------------------------------- */
+/* --- Given nixbpe it return true is the instruction is type 4 else false -- */
+bool isType4(string nixbpe)
+{
+    char e = nixbpe[5];
+    if (e == '1')
+        return true;
+    if (e == '0')
+        return false;
+    cout << "Error: Could not tell type of 'e' in 'nixbpe', value of e was read as " << e << "\n";
+    exit(EXIT_FAILURE);
+}
+
+/* -------------------------------------------------------------------------- */
 /*                               Program Counter                              */
 /* -------------------------------------------------------------------------- */
 /** Keeps count of the position the program is in. */
@@ -243,7 +277,7 @@ string COUNTER::set(string hexNumber)
 /* -------------------------------------------------------------------------- */
 /*          Compute Target Address given a simple type and an address         */
 /* -------------------------------------------------------------------------- */
-// nixbpe: 
+// nixbpe:
 string computeTA(string nixbpe, string address, string location)
 {
     char b = nixbpe[3];
@@ -253,21 +287,24 @@ string computeTA(string nixbpe, string address, string location)
     {
         if (p == '0')
         {
-            if(x == '1'){
+            if (x == '1')
+            {
                 // Index + direct
                 string index = address;
                 string direct = location;
 
                 int indexAsInt = hexToInt(index);
                 int directAsInt = hexToInt(direct);
-                
+
                 int value = indexAsInt + directAsInt;
                 return intToHex(value);
             }
         }
 
-        if(p == '1'){
-            if(x == '1'){
+        if (p == '1')
+        {
+            if (x == '1')
+            {
                 //index+ pc relative
             }
         }
@@ -276,9 +313,9 @@ string computeTA(string nixbpe, string address, string location)
     {
         if (p == '0')
         {
-            if(x == '1'){
+            if (x == '1')
+            {
                 // index + base relative
-
             }
             //BASE RELATIVE
         }
@@ -318,12 +355,14 @@ string MEMORYADDRESS::get(string nixbpe, string address)
         {
             string str = value;
             str.erase(0, min(str.find_first_not_of('0'), str.size() - 1));
-             for(int i = 0; i < allSymbols.size(); i++){
+            for (int i = 0; i < allSymbols.size(); i++)
+            {
                 string symbolLocation = allSymbols[i][0];
-                symbolLocation.erase(0, min(symbolLocation.find_first_not_of('0'), symbolLocation.size()-1));
+                symbolLocation.erase(0, min(symbolLocation.find_first_not_of('0'), symbolLocation.size() - 1));
 
-                str.erase(0, min(str.find_first_not_of('0'), str.size()-1));
-                if(symbolLocation == str){
+                str.erase(0, min(str.find_first_not_of('0'), str.size() - 1));
+                if (symbolLocation == str)
+                {
                     return "#" + allSymbols[i][1];
                 }
             }
@@ -335,19 +374,22 @@ string MEMORYADDRESS::get(string nixbpe, string address)
             return computeTA(nixbpe, address, value);
         }
 
-        if( type == "indirect" || type == "base" || type == "LDB"){
-            for(int i = 0; i < allSymbols.size(); i++){
+        if (type == "indirect" || type == "base" || type == "LDB")
+        {
+            for (int i = 0; i < allSymbols.size(); i++)
+            {
                 string symbolLocation = allSymbols[i][0];
-                symbolLocation.erase(0, min(symbolLocation.find_first_not_of('0'), symbolLocation.size()-1));
+                symbolLocation.erase(0, min(symbolLocation.find_first_not_of('0'), symbolLocation.size() - 1));
                 string newValue = value;
-                newValue.erase(0, min(newValue.find_first_not_of('0'), newValue.size()-1));
-                if(symbolLocation == newValue){
+                newValue.erase(0, min(newValue.find_first_not_of('0'), newValue.size() - 1));
+                if (symbolLocation == newValue)
+                {
                     return allSymbols[i][1];
                 }
             }
         }
 
-        if (type == "type2" || type == "litteral")
+        if (type == "type2" || type == "litteral" || type == "res")
         {
             return value;
         }
@@ -363,6 +405,24 @@ void MEMORYADDRESS::setType(string newType)
 void MEMORYADDRESS::setValue(string newValue)
 {
     value = newValue;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            Convert to LowerCase                            */
+/* -------------------------------------------------------------------------- */
+string toLowerCase(string str)
+{
+    transform(str.begin(), str.end(), str.begin(), ::tolower);
+    return str;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                To Upper Case                               */
+/* -------------------------------------------------------------------------- */
+string toUpperCase(string str)
+{
+    transform(str.begin(), str.end(), str.begin(), ::toupper);
+    return str;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -388,7 +448,17 @@ public:
 };
 void OUTPUT::setAddress(string newValue)
 {
-    address = newValue;
+    int length = newValue.length();
+    if (length < 4)
+    {
+        newValue = std::string((4 - length), '0').append(newValue);
+    }
+    if (length > 4)
+    {
+        newValue = newValue.substr((length)-4, 4);
+    }
+    address = toUpperCase(newValue);
+    lastUsedAddress = address;
 }
 void OUTPUT::setSymbol(string newValue)
 {
@@ -424,7 +494,7 @@ void OUTPUT::print()
 /*                                   Writer                                   */
 /* -------------------------------------------------------------------------- */
 bool writer(string input)
-{ 
+{
     fstream outFile;
     outFile.open("out.lst", ios::out);
     if (!outFile)
@@ -483,6 +553,58 @@ int opCodeToType(string opCode)
     }
     cout << "ERROR: Instruction type not found.\n";
     exit(EXIT_FAILURE);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          Check Before for literals                         */
+/* -------------------------------------------------------------------------- */
+OUTPUT checkBeforeRes(string address)
+{
+
+    string newAddress = toLowerCase(removeLeading0z(hexSubtract(address, "3")));
+    for (int i = 0; i < allSymbols.size(); i++)
+    {
+        string currAddress = allSymbols[i][0];
+        string currAddressRemove0 = toLowerCase(removeLeading0z(currAddress));
+        if (currAddressRemove0 == newAddress)
+        {
+            OUTPUT symbolOutput;
+            symbolOutput.setSymbol(allSymbols[i][1]);
+            symbolOutput.setAddress(hexSubtract(address, "3"));
+            symbolOutput.setInstruction("RESW");
+            symbolOutput.setLocation("res", "1");
+            return symbolOutput;
+        }
+    }
+    OUTPUT empty;
+    return empty;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                          Check After for literals                         */
+/* -------------------------------------------------------------------------- */
+OUTPUT checkAfterRes(string nextAddress)
+{
+
+    string newAddress = toLowerCase(removeLeading0z(hexAdd(lastUsedAddress, "3")));
+    for (int i = 0; i < allSymbols.size(); i++)
+    {
+        string currAddress = allSymbols[i][0];
+        string currAddressRemove0 = toLowerCase(removeLeading0z(currAddress));
+
+        if (currAddressRemove0 == newAddress)
+        {
+            OUTPUT symbolOutput;
+            string size = to_string((hexToInt(hexSubtract(nextAddress, lastUsedAddress))/3));
+            symbolOutput.setSymbol(allSymbols[i][1]);
+            symbolOutput.setAddress(hexAdd(lastUsedAddress, "3"));
+            symbolOutput.setInstruction("RESW");
+            symbolOutput.setLocation("res", size);
+            return symbolOutput;
+        }
+    }
+    OUTPUT empty;
+    return empty;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -558,34 +680,6 @@ string getType2Register(char registerNumber)
     }
 }
 
-string hexAdd(string str1, string str2){
-    int str1AsInt = hexToInt(str1);
-    int str2AsInt = hexToInt(str2);
-    int result = str1AsInt + str2AsInt;
-    return intToHex(result);
-}
-
-
-/* -------------------------------------------------------------------------- */
-/*                          Target address calculator                         */
-/* -------------------------------------------------------------------------- */
-/* --------------------- calculate type 3 target address -------------------- */
-
-string getTA(string locationValue, string currentAddress, string nixbpe){
-    char b = nixbpe[3];
-    char p = nixbpe[3];
-    if(b == '1'){
-        
-        return hexAdd(base, locationValue);
-    }
-    else if (p == '1'){
-        return hexAdd(hexAdd(currentAddress, locationValue), "3");
-    }
-    else {
-        return locationValue;
-    }
-}
-
 /* -------------------------------------------------------------------------- */
 /*                                Parse Opcodes                               */
 /* -------------------------------------------------------------------------- */
@@ -599,9 +693,23 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
         return opcodesArray;
     }
 
+
     textLocationCounter.set(startingAddress);
+
+    string location = hexSubtract(textLocationCounter.get(), "4");
+    OUTPUT after = checkAfterRes(location);
+    if(!after.instruction.empty()){
+        opcodesArray.push_back(after);
+    }
     /** store the current address to be printed out later */
     outputValue.setAddress(textLocationCounter.get());
+    
+
+    OUTPUT before = checkBeforeRes(textLocationCounter.get());
+    if (!before.instruction.empty())
+    {
+        opcodesArray.push_back(before);
+    }
 
     // Check if a symbol maches any location at current location
     for (int i = 0; i < symbolsArray.size(); i++)
@@ -682,7 +790,8 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
             textLocationCounter.add("4");
             outputValue.print();
             opcodesArray.push_back(outputValue);
-            if(opCodeAsHex == "68"){
+            if (opCodeAsHex == "68")
+            {
                 base = opcodes.substr(3, 5);
                 OUTPUT newOutputValue;
                 newOutputValue.setInstruction("BASE");
@@ -702,7 +811,6 @@ vector<OUTPUT> parseOpCodes(string opcodes, vector<OUTPUT> &opcodesArray, string
             opcodesArray.push_back(outputValue);
             parseOpCodes(opcodes.substr(6, opcodes.length()), opcodesArray, textLocationCounter.get(), symbolsArray, literalsArray);
         }
-
     }
     else
     {
@@ -772,7 +880,6 @@ vector<OUTPUT> parseTextRecord(string textLine, string &outFile, vector<vector<i
 
     string allOpCodes = textLine.substr(9, opCodeLengthAsInt * 2);
 
-
     parseOpCodes(allOpCodes, finalOutput, startingAddress, symbolsArray, literalsArray);
     return finalOutput;
 }
@@ -837,30 +944,45 @@ bool parseEndRecord(string endLine, string &outFile)
 /* -------------------------------------------------------------------------- */
 /*                             Create Final Output                            */
 /* -------------------------------------------------------------------------- */
-string createFinalOutput(string header, vector<OUTPUT> finalArray){
+string createFinalOutput(string header, vector<OUTPUT> finalArray)
+{
     string finalString = header;
-    for(int i = 0; i < finalArray.size(); i++){
+    for (int i = 0; i < finalArray.size(); i++)
+    {
         OUTPUT line = finalArray.at(i);
-
 
         // Check for any litteral replacement
         string str = line.address;
         string location = line.location.get(line.nixbpe, line.address);
-        str.erase(0, min(str.find_first_not_of('0'), str.size() - 1));
-            for(int i = 0; i < allLiterals.size(); i++){
-            string literalsAddress = allLiterals[i][0];
-            literalsAddress.erase(0, min(literalsAddress.find_first_not_of('0'), literalsAddress.size()-1));
-            if(literalsAddress == str){
-                //cout << "value: " << str  << "  litteral:" << literalsAddress << "\n";
-                location = allLiterals[i][1];
+        if (line.instruction != "RESW")
+        {
+            str.erase(0, min(str.find_first_not_of('0'), str.size() - 1));
+            for (int i = 0; i < allLiterals.size(); i++)
+            {
+                string literalsAddress = allLiterals[i][0];
+                literalsAddress.erase(0, min(literalsAddress.find_first_not_of('0'), literalsAddress.size() - 1));
+                if (literalsAddress == str)
+                {
+                    //cout << "value: " << str  << "  litteral:" << literalsAddress << "\n";
+                    location = allLiterals[i][1];
+                }
             }
         }
+
         string spacer = "     ";
         string symb = line.symbol.empty() ? "" : line.symbol;
-        if(symb.substr(0,3) == "=X'"){
-            symb = "*";
+        if(finalArray.at(i).instruction == "RESW" && (finalArray.at(i).address == finalArray.at(i-1).address || finalArray.at(i).address == finalArray.at(i+1).address)){
+            
+        }else{
+            if(symb.substr(0,3) == "=X'"){
+                if(finalArray.at(i-1).symbol.substr(0,3) != "=X'"){
+                    finalString += spacer + spacer + spacer + spacer + "LTORG" + spacer + spacer + spacer + spacer + "\n";
+                }
+                finalString += line.address + spacer + spacer + spacer + "*" + spacer + location + spacer + line.opcode + "\n";
+            }else{
+                finalString += line.address + spacer + symb + spacer + line.instruction + spacer + location + spacer + line.opcode + "\n";
+            }
         }
-        finalString += line.address + spacer+ symb  + spacer + line.instruction + spacer + location + spacer + line.opcode + "\n";
     }
     finalString += endString;
     writer(finalString);
